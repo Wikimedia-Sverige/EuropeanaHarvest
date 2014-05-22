@@ -8,39 +8,63 @@
 Script for harvesting metadata from Wikimedia Commons for the use in Europeana
 '''
 
-import codecs #might not be needed afterwards
+import codecs #might not be needed after testing
 import ujson
+import operator #only used by categoryStatistics
 
 def testing():
-    #load two example files to simulate api response
-    f=codecs.open('./mockJson/content.json','r','utf-8')
-    content = ujson.loads(f.read())
-    f.close()
-    f=codecs.open('./mockJson/imageinfo2.json','r','utf-8')
-    imageinfo = ujson.loads(f.read())
-    f.close()
-    
-    #hack for checking all categories (should be a calss variable)
-    allcats = {}
+    #based on some given category we retrieve all of the image infos
+    imageinfo = getImageInfos('testcat')
+    if not imageinfo:
+        #if false/None is returned then information could not be retrieved
+        print 'something bad happened'
+        exit(1)
     
     #container for all the info, using pageid as its key
     data = {}
     for k,v in imageinfo['query']['pages'].iteritems():
-        if not parseImageInfo(v, data, allcats):
+        if not parseImageInfo(v, data):
             #if false is returned then something bad happened
             print 'something bad happened'
     
     #add data from description
-    for k,v in content['query']['pages'].iteritems():
-        if not parseContent(v, data):
-            #if false is returned then something bad happened
-            print 'something bad happened'
+    unsupported = []
+    for k in data.keys():
+        #get content for that pageID (can only retrieve one at a time)
+        content = getContent(k)
+        if not content: #if fails then remove object from data
+            print 'content could not be retrieved for PageId %d (%s), removing' %(k, data[k]['title'])
+            unsupported.append(k)
+        elif not parseContent(k, content, data):
+            #if false is returned then object was not supported
+            print '%s did not contain a supported information tempalte' %data[k]['title']
+            unsupported.append(k)
+    
+    #remove problematic entries
+    for k in unsupported:
+        del data[k]
     
     outputXML(data)
     print(u'-------------------------------')
-    outputCatStat(allcats)
+    outputCatStat(data)
 
-def parseImageInfo(imageJson, data, allcats):
+def getImageInfos(maincat):
+    '''set up for testing only'''
+    f=codecs.open('./mockJson/imageinfo2.json','r','utf-8')
+    imageinfo = ujson.loads(f.read())
+    f.close()
+    return imageinfo
+    
+def getContent(pageId):
+    '''set up for testing only'''
+    if pageId == 27970534:
+        f=codecs.open('./mockJson/content.json','r','utf-8')
+        content = ujson.loads(f.read())
+        f.close()
+        return content['parse']
+    return None
+
+def parseImageInfo(imageJson, data):
     '''parse a single page in imageInfo reply from the API'''
     #Issues:
     ## Assumes Information template. Need to test with e.g artwork template and see what happens if there is no template
@@ -82,7 +106,6 @@ def parseImageInfo(imageJson, data, allcats):
     dateDig     = imageJson['extmetadata']['DateTimeDigitized']['value'].strip() if u'DateTimeDigitized' in imageJson['extmetadata'].keys() else None
     dateOrig    = imageJson['extmetadata']['DateTimeOriginal']['value'].strip() if u'DateTimeOriginal' in imageJson['extmetadata'].keys() else None
     dateMeta    = imageJson['extmetadata']['DateTimeMetadata']['value'].strip() if u'DateTimeMetadata' in imageJson['extmetadata'].keys() else None
-    categories  = imageJson['extmetadata']['Categories']['value'].split('|') if u'Categories' in imageJson['extmetadata'].keys() else []
     licenseShortName = imageJson['extmetadata']['LicenseShortName']['value'].strip() if u'LicenseShortName' in imageJson['extmetadata'].keys() else None
     licenseurl  = imageJson['extmetadata']['LicenseUrl']['value'].strip() if u'LicenseUrl' in imageJson['extmetadata'].keys() else None
     artist      = imageJson['extmetadata']['Artist']['value'].strip() if u'Artist' in imageJson['extmetadata'].keys() else None
@@ -154,50 +177,51 @@ def parseImageInfo(imageJson, data, allcats):
     if objectName:
         obj['title'] = objectName
     
-    ## filter out maintanance categories - and produce some sort of category dump/count
-    obj[u'categories'] = filterCategories(categories, allcats)
-    
     #successfully reached the end
     data[pageId] = obj
     return True
 
-def filterCategories(catList, allcats):
-    '''filter out maintanance categories and create basic category statistics'''
-    #These should be created on initialisation from an external file
-    catFilter = (u'Images by', u'Images from', u'Media with', u'Media created by', u'Uploaded via', u'CC-BY-', u'GFDL', u'CC-PD-'
-                 u'Uploaded with', u'Featured pictures', u'Self-published work', u'License migration redundant', 
-                 u'Protected buildings in Sweden with known IDs')
+def parseContent(pageId, contentJson, data):
+    '''parse a single parse reply from the API
+       with the aim of identifying the institution links, non-maintanance categories and used templates.
+       adds to data: categories (list), sourcelinks (list)
+       returns: Boolean on whether the image desciption contains one of the supported templates
+       '''
+    #supported info templates - based on what is suppported by parseImageInfo
+    infoTemplate = [u'Template:Information']
     
-    newList= []
+    #these should be externalised
+    ##Format template name:tuple of url starts
+    idTemplates = {u'Template:BBR':(u'http://kulturarvsdata.se/raa/bbr/html/',u'http://kulturarvsdata.se/raa/bbra/html/',u'http://kulturarvsdata.se/raa/bbrb/html/'), 
+                   u'Template:Fornminne':(u'http://kulturarvsdata.se/raa/fmi/html/',), 
+                   u'Template:K-Fartyg':(u'http://www.sjohistoriska.se/sv/Kusten-runt/Fartyg--batar/K-markning-av-fartyg/K-markta-fartyg/')
+                  }
     
-    for c in catList:
-        filtered = False
-        if c.startswith(catFilter): filtered = True
-        #add to stats
-        if c in allcats.keys():
-            allcats[c]['count']+=1
-        else:
-            allcats[c] = {'count':1, 'filtered':filtered}
-        
-        #add to new list
-        if not filtered:
-            newList.append(c)
+    #structure up info as simple lists
+    templates = []
+    for t in contentJson['templates']:
+        if 'exists' in t.keys(): templates.append(t['*'])
+    data[pageId][u'categories'] = []
+    for c in contentJson['categories']:
+        if not 'hidden' in c.keys(): data[pageId][u'categories'].append(c['*'].replace('_',' '))
+    extLinks = contentJson['externallinks'] #not really needed
     
-    return newList
-
-def parseContent(contentJson, data):
-    '''parse a single revisions/content reply from the API
-       with the aim of identifying the institution link along with additional descriptions'''
-    pageId = contentJson['pageid']
+    #Checking that the information structure is supported
+    supported = False
+    for t in infoTemplate:
+        if t in templates:
+            supported = True
     
-    #check if the pageID exists in data.keys()
-    if not pageId in data.keys():
-        #Possibly add more triage here
-        print u'The content pageId for %s was not found amongst the imageInfo pageIds. Either the page was updated inbetween or the object was skipped due to some error' %contentJson['title']
-        return False
+    #Isolate the source templates and identify the source links
+    data[pageId][u'sourcelinks'] = []
+    for k, v in idTemplates.iteritems():
+        if k in templates:
+            for e in extLinks:
+                if e.startswith(v):
+                    data[pageId][u'sourcelinks'].append(e)
     
-    #swithch to inner info
-    contentJson = contentJson['revisions'][0]
+    #successfully reached the end
+    return supported
 
 def outputXML(data):
     '''output the data in the desired format'''
@@ -209,9 +233,22 @@ def outputXML(data):
 
 def outputCatStat(data):
     '''output the category statistics in the desired format'''
-    #for testing
+    
+    allCats = {}
     for k,v in data.iteritems():
-        txt = u'[_]'
-        if v['filtered']: txt = u'[F]'
-        print u'%s %s: %d' %(txt, k, v['count'])
+        for c in v['categories']:
+            if c in allCats.keys():
+                allCats[c] += 1
+            else:
+                allCats[c] = 1
+    
+    sorted_allCats = sortedDict(allCats)
+    #for testing
+    for k in sorted_allCats:
+        print u'%d: %s' %(k[1], k[0])
+
+def sortedDict(ddict):
+    '''turns a dict into a sorted list'''
+    sorted_ddict = sorted(ddict.iteritems(), key=operator.itemgetter(1), reverse=True)
+    return sorted_ddict
 #EoF
