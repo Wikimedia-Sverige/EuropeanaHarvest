@@ -3,7 +3,16 @@
 #
 # By: André Costa, Wikimedia Sverige
 # License: MIT
+# 2014
 #
+# To do:
+## output errors to log
+## wrap in class to allow for communal variables (log, data, wpApi) and initialisation of communal variables (supported templates, scriptverison etc.)
+## externalise project info
+## resolve how to deal with credit/uploader/photographer
+### rewsolve how to deal with templates in credit
+## resolve how to deal with links (in description)
+### should red links be treated differently.
 '''
 Script for harvesting metadata from Wikimedia Commons for the use in Europeana
 '''
@@ -11,27 +20,50 @@ Script for harvesting metadata from Wikimedia Commons for the use in Europeana
 import codecs #might not be needed after testing
 import ujson
 import operator #only used by categoryStatistics
+import WikiApi as wikiApi
+from getpass import getpass #not needed if this is put into config file
 
-def testing():
+def testing(verbose=True):
+    #communal variables
+    scriptname = u'EuropeanaScript'
+    scriptversion = u'0.5'
+    siteurl = 'https://commons.wikimedia.org'
+    
+    #testing parameters
+    user = u'L_PBot' #=getpass(u'Username:')
+    basecat = 'Category:Images from Wiki Loves Monuments 2013 in Sweden'
+    
+    #Connect to api
+    wpApi = wikiApi.WikiApi.setUpApi(user=user, password=getpass(), site=siteurl, scriptidentify=u'%s/%s' %(scriptname,scriptversion)) 
+    
     #based on some given category we retrieve all of the image infos
-    imageinfo = getImageInfos('testcat')
+    if verbose: print u'Retrieving ImageInfo...'
+    imageinfo = getImageInfos(basecat, wpApi, debug=False, verbose=verbose)
     if not imageinfo:
         #if false/None is returned then information could not be retrieved
         print 'something bad happened'
         exit(1)
     
     #container for all the info, using pageid as its key
+    if verbose: print u'Parsing ImageInfo...'
+    counter = 0
     data = {}
-    for k,v in imageinfo['query']['pages'].iteritems():
+    for k,v in imageinfo.iteritems():
+        counter +=1
+        if verbose and (counter%250)==0: print u'Parsed %d out of %d' %(counter, len(imageinfo))
         if not parseImageInfo(v, data):
             #if false is returned then something bad happened
             print 'something bad happened'
     
     #add data from description
+    if verbose: print u'Retrieving content...'
+    counter = 0
     unsupported = []
     for k in data.keys():
+        counter +=1
+        if verbose and (counter%100)==0: print u'Retrieved %d out of %d' %(counter, len(data))
         #get content for that pageID (can only retrieve one at a time)
-        content = getContent(k)
+        content = getContent(k,wpApi)
         if not content: #if fails then remove object from data
             print 'content could not be retrieved for PageId %d (%s), removing' %(k, data[k]['title'])
             unsupported.append(k)
@@ -44,25 +76,90 @@ def testing():
     for k in unsupported:
         del data[k]
     
-    outputXML(data)
-    print(u'-------------------------------')
     outputCatStat(data)
+    outputXML(data)
 
-def getImageInfos(maincat):
-    '''set up for testing only'''
-    f=codecs.open('./mockJson/imageinfo2.json','r','utf-8')
-    imageinfo = ujson.loads(f.read())
-    f.close()
-    return imageinfo
+def getImageInfos(maincat, wpApi, debug=False, verbose=False):
+    '''given a single category this queries the MediaWiki api for the parsed content of that page'''
+    #needs more error checking
+    gcmlimit = 250 #250 how many images to ask about at once
     
-def getContent(pageId):
-    '''set up for testing only'''
-    if pageId == 27970534:
-        f=codecs.open('./mockJson/content.json','r','utf-8')
-        content = ujson.loads(f.read())
-        f.close()
-        return content['parse']
-    return None
+    #test that category exists and check number of entries
+    #/w/api.php?action=query&prop=categoryinfo&format=json&titles=Category%3AImages%20from%20Wiki%20Loves%20Monuments%202013%20in%20Sweden
+    jsonr = wpApi.httpGET("query", [('prop', 'categoryinfo'),
+                                    ('titles', maincat.encode('utf-8'))
+                                   ])
+    if debug:
+        print u'getImageInfos() categoryinfo for: %s' %maincat
+        print jsonr
+    jsonr = jsonr['query']['pages'].iteritems().next()[1]
+    #check for error
+    if 'missing' in jsonr.keys():
+        print u'The category "%s" does not exist. Did you maybe forget the "Category:"-prefix?' %maincat
+        return None
+    total = jsonr['categoryinfo']['files']
+    if verbose:
+        print u'The category "%s" contains %d files and %d subcategories (the latter will not be checked)' %(maincat, total, jsonr['categoryinfo']['subcats'])
+    
+    #then start retrieving info
+    #/w/api.php?action=query&prop=imageinfo&format=json&iiprop=user%7Curl%7Cmime%7Cextmetadata&iilimit=1&generator=categorymembers&gcmtitle=Category%3AImages%20from%20Wiki%20Loves%20Monuments%202013%20in%20Sweden&gcmprop=title&gcmnamespace=6&gcmlimit=50
+    jsonr = wpApi.httpGET("query", [('prop', 'imageinfo'),
+                                    ('iiprop', 'user|url|mime|extmetadata'),
+                                    ('iilimit', '1'),
+                                    ('generator', 'categorymembers'),
+                                    ('gcmprop', 'title'),
+                                    ('gcmnamespace', '6'),
+                                    ('gcmlimit', str(gcmlimit)),
+                                    ('gcmtitle', maincat.encode('utf-8'))
+                                   ])
+    if debug:
+        print u'getImageInfos() imageinfo for: %s' %maincat
+        print jsonr
+    #store (part of) the json
+    imageInfo = jsonr['query']['pages'] # a dict where pageId is the key
+    
+    #while continue get the rest
+    counter = 0
+    while('query-continue' in jsonr.keys()):
+        counter += gcmlimit
+        if verbose: 
+            print u'Retrieved %d out of %d (roughly)' %(counter, total)
+        jsonr = wpApi.httpGET("query", [('prop', 'imageinfo'),
+                                        ('iiprop', 'user|url|mime|extmetadata'),
+                                        ('iilimit', '1'),
+                                        ('generator', 'categorymembers'),
+                                        ('gcmprop', 'title'),
+                                        ('gcmnamespace', '6'),
+                                        ('gcmlimit', str(gcmlimit)),
+                                        ('gcmcontinue',jsonr['query-continue']['categorymembers']['gcmcontinue']),
+                                        ('gcmtitle', maincat.encode('utf-8'))
+                                       ])
+        #store (part of) json
+        imageInfo.update(jsonr['query']['pages'])
+        #if counter >900: break #testing
+    
+    #sucessfully reached end
+    return imageInfo
+
+def getContent(pageId, wpApi, debug=False):
+    '''given a pageId this queries the MediaWiki api for the parsed content of that page'''
+    #/w/api.php?action=parse&format=json&pageid=27970534&prop=categories%7Ctemplates%7Cexternallinks
+    jsonr = wpApi.httpGET("parse", [('prop', 'categories|templates|externallinks'),
+                                    ('pageid', str(pageId))
+                                   ])
+    if debug:
+        print u'getContent() pageId:%d \n' %pageId
+        print jsonr
+        
+    #check for error
+    if 'error' in jsonr.keys():
+        print jsonr['error']['info']
+        return None
+    elif 'parse' in jsonr.keys():
+        return jsonr['parse']
+    else:
+        print 'you should never get here'
+        return None
 
 def parseImageInfo(imageJson, data):
     '''parse a single page in imageInfo reply from the API'''
@@ -71,6 +168,8 @@ def parseImageInfo(imageJson, data):
     ### For artwork. Title might be different, also artist/photographer.
     ## Does not deal with multiple licenses (see /w/api.php?action=query&prop=imageinfo&format=json&iiprop=commonmetadata%7Cextmetadata&iilimit=1&titles=File%3AKalmar%20cathedral%20Kalmar%20Sweden%20001.JPG)
     ## Is more content validation needed?
+    ## Filter out more credit stuff
+    ## filter out more description stuff
     commonsMetadataExtension = 1.2 # the version of the extention for which the script was designed
     pdMark = u'https://creativecommons.org/publicdomain/mark/1.0/'
     
@@ -100,7 +199,8 @@ def parseImageInfo(imageJson, data):
     
     #listing potentially interesting fields
     user        = imageJson['user'] #as backup for later field
-    obj['imageDescription'] = imageJson['extmetadata']['ImageDescription']['value'].strip() if u'ImageDescription' in imageJson['extmetadata'].keys() else None
+    obj['imageDescription'] = descriptionFiltering(imageJson['extmetadata']['ImageDescription']['value'].strip()) if u'ImageDescription' in imageJson['extmetadata'].keys() else None
+    obj['credit'] = creditFiltering(imageJson['extmetadata']['Credit']['value'].strip()) if u'Credit' in imageJson['extmetadata'].keys() else None #send straight to filtering
     objectName  = imageJson['extmetadata']['ObjectName']['value'].strip() if u'ObjectName' in imageJson['extmetadata'].keys() else None
     datePlain   = imageJson['extmetadata']['DateTime']['value'].strip() if u'DateTime' in imageJson['extmetadata'].keys() else None
     dateDig     = imageJson['extmetadata']['DateTimeDigitized']['value'].strip() if u'DateTimeDigitized' in imageJson['extmetadata'].keys() else None
@@ -109,8 +209,7 @@ def parseImageInfo(imageJson, data):
     licenseShortName = imageJson['extmetadata']['LicenseShortName']['value'].strip() if u'LicenseShortName' in imageJson['extmetadata'].keys() else None
     licenseurl  = imageJson['extmetadata']['LicenseUrl']['value'].strip() if u'LicenseUrl' in imageJson['extmetadata'].keys() else None
     artist      = imageJson['extmetadata']['Artist']['value'].strip() if u'Artist' in imageJson['extmetadata'].keys() else None
-    credit      = imageJson['extmetadata']['Credit']['value'].strip() if u'Credit' in imageJson['extmetadata'].keys() else None #does this ever say something other than own work?
-    #usageTerms = imageJson['extmetadata']['UsageTerms']['value'].strip() if u'UsageTerms' in imageJson['extmetadata'].keys() else None #does this ever say something other than license?
+    obj['usageTerms'] = imageJson['extmetadata']['UsageTerms']['value'].strip() if u'UsageTerms' in imageJson['extmetadata'].keys() else None #does this ever contain anything useful?
     copyrighted = imageJson['extmetadata']['Copyrighted']['value'].strip() if u'Copyrighted' in imageJson['extmetadata'].keys() else None #if PD
     
     #Post processing:
@@ -166,12 +265,6 @@ def parseImageInfo(imageJson, data):
         obj['created'] = dateMeta
     else:
         obj['created'] = u''
-
-    ## check credit
-    if credit and credit != u'<span class="int-own-work">Own work</span>':
-        obj['credit'] = credit
-    else:
-        obj['credit'] = None
     
     ##If a proper objectName exists then overwrite title
     if objectName:
@@ -190,6 +283,9 @@ def parseContent(pageId, contentJson, data):
     #supported info templates - based on what is suppported by parseImageInfo
     infoTemplate = [u'Template:Information']
     
+    #maintanance categories which are not hidden - only start of categorynames
+    dudCats = ('Media needing categories',)
+    
     #these should be externalised
     ##Format template name:tuple of url starts
     idTemplates = {u'Template:BBR':(u'http://kulturarvsdata.se/raa/bbr/html/',u'http://kulturarvsdata.se/raa/bbra/html/',u'http://kulturarvsdata.se/raa/bbrb/html/'), 
@@ -203,7 +299,9 @@ def parseContent(pageId, contentJson, data):
         if 'exists' in t.keys(): templates.append(t['*'])
     data[pageId][u'categories'] = []
     for c in contentJson['categories']:
-        if not 'hidden' in c.keys(): data[pageId][u'categories'].append(c['*'].replace('_',' '))
+        if not 'hidden' in c.keys() and not 'missing' in c.keys():
+            if not unicode(c['*']).startswith(dudCats):
+                data[pageId][u'categories'].append(unicode(c['*']).replace('_',' ')) #unicode since some names are interpreted as longs
     extLinks = contentJson['externallinks'] #not really needed
     
     #Checking that the information structure is supported
@@ -226,14 +324,22 @@ def parseContent(pageId, contentJson, data):
 def outputXML(data):
     '''output the data in the desired format'''
     #for testing
+    filename = u'output.csv'
+    f = codecs.open(filename, 'w', 'utf-8')
+    f.write(u'#mediatype|created|medialink|uploader|sourcelinks|identifier|categories|copyright|title|photographer|usageTerms|credit|imageDescription\n')
     for k,v in data.iteritems():
-        print u'%s' %k
         for kk, vv in v.iteritems():
-            print u'\t%s: %s' %(kk,vv)
+            if vv is None:
+                v[kk] = ''
+            if kk in ['sourcelinks', 'categories']:
+                v[kk] = ';'.join(v[kk])
+            v[kk] = v[kk].replace('|','!').replace('\n',u'¤')
+        f.write(u'%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' %(v['mediatype'], v['created'], v['medialink'], v['uploader'], v['sourcelinks'], v['identifier'], v['categories'], v['copyright'], v['title'], v['photographer'], v['usageTerms'], v['credit'], v['imageDescription']))
+    f.close()
+    print u'Created %s' %filename
 
 def outputCatStat(data):
     '''output the category statistics in the desired format'''
-    
     allCats = {}
     for k,v in data.iteritems():
         for c in v['categories']:
@@ -244,8 +350,61 @@ def outputCatStat(data):
     
     sorted_allCats = sortedDict(allCats)
     #for testing
+    filename = u'categoryStatistics.csv'
+    f = codecs.open(filename, 'w', 'utf-8')
+    f.write(u'#frequency|category\n')
     for k in sorted_allCats:
-        print u'%d: %s' %(k[1], k[0])
+          f.write(u'%d|%s\n' %(k[1], k[0]))
+    f.close()
+    print u'Created %s' %filename
+
+def creditFiltering(credit):
+    '''given a credit string this filters out strings known to be irrelevant
+       returns: None if nothing relevant is left otherwise remaining text'''
+    #Should be externalised
+    filterstrings = [u'<span class="int-own-work">Own work</span>',]
+    for f in filterstrings:
+        credit = credit.replace(f,'')
+        if len(credit.strip()) == 0:
+            return None
+    
+    #More advanced
+    ##Consider doing the same tag filtering as for descriptions
+    return credit.strip()
+
+def descriptionFiltering(description):
+    '''given a description string this filters out any tags which likely indicate templates'''
+    filtertags = ['div', 'table']
+    for t in filtertags:
+        #replace all occurences of tag
+        description = stripTag(description, t)
+        if len(description.strip()) == 0:
+            return None
+        #next tag
+    #all tags checked
+    return description.strip()
+
+def stripTag(text, t):
+    '''given a string and a tag this strips out all occurences of this tag from the text
+       assumes tag starts with "<tag" and ends "</tag>"
+       returns stripped text'''
+    if text.find('<%s' %t) >=0:
+        #find all occurences of this tag
+        startpos = []
+        sp = text.find('<%s' %t)
+        while sp >=0:
+            startpos.append(sp)
+            sp = text.find('<%s' %t, sp+1)
+        #find the matching end tags
+        while len(startpos)>0:
+            sp=startpos.pop() #gets the last one
+            ep=text.find('</%s>' %t,sp+1) #get endposition
+            if ep<0:
+                print 'missmatched tags, aborting search for %s tag' %t
+                break
+            else:
+                text = text[:sp]+text[ep+len('</%s>' %t):] #strip out this occurence of the tag
+    return text
 
 def sortedDict(ddict):
     '''turns a dict into a sorted list'''
