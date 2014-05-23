@@ -22,8 +22,9 @@ import ujson
 import operator #only used by categoryStatistics
 import WikiApi as wikiApi
 from getpass import getpass #not needed if this is put into config file
+from lxml import etree #for xml output
 
-def testing(verbose=True):
+def testing(verbose=True, testing=True):
     #communal variables
     scriptname = u'EuropeanaScript'
     scriptversion = u'0.5'
@@ -38,7 +39,7 @@ def testing(verbose=True):
     
     #based on some given category we retrieve all of the image infos
     if verbose: print u'Retrieving ImageInfo...'
-    imageinfo = getImageInfos(basecat, wpApi, debug=False, verbose=verbose)
+    imageinfo = getImageInfos(basecat, wpApi, debug=False, verbose=verbose, testing=True)
     if not imageinfo:
         #if false/None is returned then information could not be retrieved
         print 'something bad happened'
@@ -69,7 +70,6 @@ def testing(verbose=True):
             unsupported.append(k)
         elif not parseContent(k, content, data):
             #if false is returned then object was not supported
-            print '%s did not contain a supported information tempalte' %data[k]['title']
             unsupported.append(k)
     
     #remove problematic entries
@@ -78,11 +78,14 @@ def testing(verbose=True):
     
     outputCatStat(data)
     outputXML(data)
+    outputCSV(data)
 
-def getImageInfos(maincat, wpApi, debug=False, verbose=False):
+def getImageInfos(maincat, wpApi, debug=False, verbose=False, testing=False):
     '''given a single category this queries the MediaWiki api for the parsed content of that page'''
     #needs more error checking
     gcmlimit = 250 #250 how many images to ask about at once
+    if testing:
+        gcmlimit = 5
     
     #test that category exists and check number of entries
     #/w/api.php?action=query&prop=categoryinfo&format=json&titles=Category%3AImages%20from%20Wiki%20Loves%20Monuments%202013%20in%20Sweden
@@ -136,7 +139,8 @@ def getImageInfos(maincat, wpApi, debug=False, verbose=False):
                                        ])
         #store (part of) json
         imageInfo.update(jsonr['query']['pages'])
-        #if counter >900: break #testing
+        if testing:
+            if counter >15: break #testing
     
     #sucessfully reached end
     return imageInfo
@@ -198,8 +202,8 @@ def parseImageInfo(imageJson, data):
     obj = {'title':title, 'medialink':imageJson['url'].strip(), 'identifier':imageJson['descriptionurl'].strip(), 'mediatype':'IMAGE'}
     
     #listing potentially interesting fields
-    user        = imageJson['user'] #as backup for later field
-    obj['imageDescription'] = descriptionFiltering(imageJson['extmetadata']['ImageDescription']['value'].strip()) if u'ImageDescription' in imageJson['extmetadata'].keys() else None
+    user        = imageJson['user'] #as backup for later field. Note that this is the latest uploader, not necessarily the original one.
+    obj['description'] = descriptionFiltering(imageJson['extmetadata']['ImageDescription']['value'].strip()) if u'ImageDescription' in imageJson['extmetadata'].keys() else None
     obj['credit'] = creditFiltering(imageJson['extmetadata']['Credit']['value'].strip()) if u'Credit' in imageJson['extmetadata'].keys() else None #send straight to filtering
     objectName  = imageJson['extmetadata']['ObjectName']['value'].strip() if u'ObjectName' in imageJson['extmetadata'].keys() else None
     datePlain   = imageJson['extmetadata']['DateTime']['value'].strip() if u'DateTime' in imageJson['extmetadata'].keys() else None
@@ -302,6 +306,9 @@ def parseContent(pageId, contentJson, data):
         if not 'hidden' in c.keys() and not 'missing' in c.keys():
             if not unicode(c['*']).startswith(dudCats):
                 data[pageId][u'categories'].append(unicode(c['*']).replace('_',' ')) #unicode since some names are interpreted as longs
+    if len(data[pageId][u'categories']) == 0:
+        print u'%s did not have a single (non-maintanence) categories and was therefore excluded' % data[pageId][u'title']
+        return False
     extLinks = contentJson['externallinks'] #not really needed
     
     #Checking that the information structure is supported
@@ -309,6 +316,9 @@ def parseContent(pageId, contentJson, data):
     for t in infoTemplate:
         if t in templates:
             supported = True
+    if not supported:
+        print '%s did not contain a supported information template' %data[k]['title']
+        return False
     
     #Isolate the source templates and identify the source links
     data[pageId][u'sourcelinks'] = []
@@ -319,14 +329,13 @@ def parseContent(pageId, contentJson, data):
                     data[pageId][u'sourcelinks'].append(e)
     
     #successfully reached the end
-    return supported
+    return True
 
-def outputXML(data):
-    '''output the data in the desired format'''
+def outputCSV(data, filename = u'output.csv'):
+    '''output the data as a csv for an easy overview. Also allows outputting more fields than are included in xml'''
     #for testing
-    filename = u'output.csv'
     f = codecs.open(filename, 'w', 'utf-8')
-    f.write(u'#mediatype|created|medialink|uploader|sourcelinks|identifier|categories|copyright|title|photographer|usageTerms|credit|imageDescription\n')
+    f.write(u'#mediatype|created|medialink|uploader|sourcelinks|identifier|categories|copyright|title|photographer|usageTerms|credit|description\n')
     for k,v in data.iteritems():
         for kk, vv in v.iteritems():
             if vv is None:
@@ -334,11 +343,95 @@ def outputXML(data):
             if kk in ['sourcelinks', 'categories']:
                 v[kk] = ';'.join(v[kk])
             v[kk] = v[kk].replace('|','!').replace('\n',u'¤')
-        f.write(u'%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' %(v['mediatype'], v['created'], v['medialink'], v['uploader'], v['sourcelinks'], v['identifier'], v['categories'], v['copyright'], v['title'], v['photographer'], v['usageTerms'], v['credit'], v['imageDescription']))
+        f.write(u'%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' %(v['mediatype'], v['created'], v['medialink'], v['uploader'], v['sourcelinks'], v['identifier'], v['categories'], v['copyright'], v['title'], v['photographer'], v['usageTerms'], v['credit'], v['description']))
     f.close()
     print u'Created %s' %filename
 
-def outputCatStat(data):
+def outputXML(data, filename = u'output.xml'):
+    '''output the data as xml acording to the desired format'''
+    NSMAP = {"dc" : 'dummy'} #lxml requieres namespaces to be declared, Europeana want's them stripped (se latter replacement)
+    
+    f = codecs.open(filename, 'w', 'utf-8')
+    f.write(u"<?xml version='1.0' encoding='UTF-8'?>\n") #proper declaration does not play nice with unicode
+    
+    for k,v in data.iteritems():
+        dc = etree.Element('{dummy}dc', nsmap=NSMAP)
+        
+        #identifier - mandatory
+        child = etree.Element('identifier')
+        child.text = v['identifier']
+        dc.append(child)
+        
+        #sourcelink - optional, multiple
+        for s in v['sourcelinks']:
+            child = etree.Element('sourcelink')
+            child.text = s
+            dc.append(child)
+        if len(v['sourcelinks']) == 0:
+            dc.append(etree.Element('sourcelink'))
+        
+        #title - mandatory
+        child = etree.Element('title')
+        child.text = v['title']
+        dc.append(child)
+        
+        #photographer - mandatory
+        child = etree.Element('photographer')
+        child.text = v['photographer']
+        dc.append(child)
+        
+        #creator - optional
+        child = etree.Element('creator')
+        if 'creator' in v.keys() and v['creator']: child.text = v['creator']
+        dc.append(child)
+        
+        #created - optional
+        child = etree.Element('created')
+        if 'created' in v.keys() and v['created']: child.text = v['created']
+        dc.append(child)
+        
+        #description - optional
+        child = etree.Element('description')
+        if 'description' in v.keys() and v['description']: child.text = v['description']
+        dc.append(child)
+        
+        #category - mandatory, multiple
+        for c in v['categories']:
+            child = etree.Element('category')
+            child.text = c
+            dc.append(child)
+        if len(v['categories']) == 0: #fail-safe
+            print u'something went wrong and %s did not have any categories =/' %v['identifier']
+            dc.append(etree.Element('category'))
+        
+        #link - mandatory (same as identifier)
+        child = etree.Element('link')
+        child.text = v['identifier']
+        dc.append(child)
+        
+        #medialink - mandatory
+        child = etree.Element('medialink')
+        child.text = v['medialink']
+        dc.append(child)
+        
+        #copyright - mandatory
+        child = etree.Element('copyright')
+        child.text = v['copyright']
+        dc.append(child)
+        
+        #type - mandatory
+        child = etree.Element('type')
+        child.text = v['mediatype']
+        dc.append(child)
+        
+        #end of single dc-element
+        f.write(etree.tostring(dc, pretty_print=True, encoding='unicode').replace(u' xmlns:dc="dummy"',''))
+    
+    #end of all dc-elements
+    f.close()
+    print u'Created %s' %filename
+
+def outputCatStat(data, filename = u'categoryStatistics.csv'):
     '''output the category statistics in the desired format'''
     allCats = {}
     for k,v in data.iteritems():
@@ -350,7 +443,6 @@ def outputCatStat(data):
     
     sorted_allCats = sortedDict(allCats)
     #for testing
-    filename = u'categoryStatistics.csv'
     f = codecs.open(filename, 'w', 'utf-8')
     f.write(u'#frequency|category\n')
     for k in sorted_allCats:
@@ -407,7 +499,7 @@ def stripTag(text, t):
     return text
 
 def sortedDict(ddict):
-    '''turns a dict into a sorted list'''
+    '''turns a dict into a sorted list of tuples'''
     sorted_ddict = sorted(ddict.iteritems(), key=operator.itemgetter(1), reverse=True)
     return sorted_ddict
 #EoF
