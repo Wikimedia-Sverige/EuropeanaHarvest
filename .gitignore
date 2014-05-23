@@ -1,3 +1,5 @@
 *.rtf
 *.txt
+*.csv
+*.xml
 .~lock.*
