@@ -306,9 +306,6 @@ def parseContent(pageId, contentJson, data):
         if not 'hidden' in c.keys() and not 'missing' in c.keys():
             if not unicode(c['*']).startswith(dudCats):
                 data[pageId][u'categories'].append(unicode(c['*']).replace('_',' ')) #unicode since some names are interpreted as longs
-    if len(data[pageId][u'categories']) == 0:
-        print u'%s did not have a single (non-maintanence) categories and was therefore excluded' % data[pageId][u'title']
-        return False
     extLinks = contentJson['externallinks'] #not really needed
     
     #Checking that the information structure is supported
@@ -367,8 +364,6 @@ def outputXML(data, filename = u'output.xml'):
             child = etree.Element('sourcelink')
             child.text = s
             dc.append(child)
-        if len(v['sourcelinks']) == 0:
-            dc.append(etree.Element('sourcelink'))
         
         #title - mandatory
         child = etree.Element('title')
@@ -381,28 +376,28 @@ def outputXML(data, filename = u'output.xml'):
         dc.append(child)
         
         #creator - optional
-        child = etree.Element('creator')
-        if 'creator' in v.keys() and v['creator']: child.text = v['creator']
-        dc.append(child)
+        if 'creator' in v.keys() and v['creator']:
+            child = etree.Element('creator')
+            child.text = v['creator']
+            dc.append(child)
         
         #created - optional
-        child = etree.Element('created')
-        if 'created' in v.keys() and v['created']: child.text = v['created']
-        dc.append(child)
+        if 'created' in v.keys() and v['created']:
+            child = etree.Element('created')
+            child.text = v['created']
+            dc.append(child)
         
         #description - optional
-        child = etree.Element('description')
-        if 'description' in v.keys() and v['description']: child.text = v['description']
-        dc.append(child)
+        if 'description' in v.keys() and v['description']: 
+            child = etree.Element('description')
+            child.text = v['description']
+            dc.append(child)
         
-        #category - mandatory, multiple
+        #category - optional, multiple
         for c in v['categories']:
             child = etree.Element('category')
             child.text = c
             dc.append(child)
-        if len(v['categories']) == 0: #fail-safe
-            print u'something went wrong and %s did not have any categories =/' %v['identifier']
-            dc.append(etree.Element('category'))
         
         #link - mandatory (same as identifier)
         child = etree.Element('link')
@@ -467,6 +462,8 @@ def creditFiltering(credit):
 def descriptionFiltering(description):
     '''given a description string this filters out any tags which likely indicate templates'''
     filtertags = ['div', 'table']
+    maxChars = 200 #max alowed length of description field
+    
     for t in filtertags:
         #replace all occurences of tag
         description = stripTag(description, t)
@@ -474,6 +471,11 @@ def descriptionFiltering(description):
             return None
         #next tag
     #all tags checked
+    
+    #truncate at maxChars characters and elipse with ...
+    if len(description) > maxChars:
+        description = u'%s...' %description[:(maxChars-3)]
+        
     return description.strip()
 
 def stripTag(text, t):
