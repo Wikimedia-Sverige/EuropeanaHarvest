@@ -1,0 +1,20 @@
+{
+  "project-name": "wlm-se-2013",
+  "id-templates": {
+    "Template:K-Fartyg": [
+      "http:\/\/www.sjohistoriska.se\/sv\/Kusten-runt\/Fartyg--batar\/K-markning-av-fartyg\/K-markta-fartyg\/"
+    ],
+    "Template:BBR": [
+      "http:\/\/kulturarvsdata.se\/raa\/bbr\/html\/",
+      "http:\/\/kulturarvsdata.se\/raa\/bbra\/html\/",
+      "http:\/\/kulturarvsdata.se\/raa\/bbrb\/html\/"
+    ],
+    "Template:Fornminne": [
+      "http:\/\/kulturarvsdata.se\/raa\/fmi\/html\/"
+    ]
+  },
+  "base-categories": [
+    "Category:Images from Wiki Loves Monuments 2013 in Sweden"
+  ],
+  "output-pattern": "output/wlm-se-2013"
+}
