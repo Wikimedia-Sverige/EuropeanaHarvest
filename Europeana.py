@@ -76,9 +76,10 @@ def testing(verbose=True, testing=True):
     for k in unsupported:
         del data[k]
     
-    outputCatStat(data)
-    outputXML(data)
-    outputCSV(data)
+    #output data incl. csv for follow-up
+    outputCatStat(data, filename = u'categoryStatistics.csv')
+    outputXML(data, filename = u'output.xml')
+    outputCSV(data, filename = u'output.csv')
 
 def getImageInfos(maincat, wpApi, debug=False, verbose=False, testing=False):
     '''given a single category this queries the MediaWiki api for the parsed content of that page'''
@@ -328,7 +329,7 @@ def parseContent(pageId, contentJson, data):
     #successfully reached the end
     return True
 
-def outputCSV(data, filename = u'output.csv'):
+def outputCSV(data, filename):
     '''output the data as a csv for an easy overview. Also allows outputting more fields than are included in xml'''
     #for testing
     f = codecs.open(filename, 'w', 'utf-8')
@@ -344,7 +345,7 @@ def outputCSV(data, filename = u'output.csv'):
     f.close()
     print u'Created %s' %filename
 
-def outputXML(data, filename = u'output.xml'):
+def outputXML(data, filename):
     '''output the data as xml acording to the desired format'''
     NSMAP = {"dc" : 'dummy'} #lxml requieres namespaces to be declared, Europeana want's them stripped (se latter replacement)
     
@@ -426,7 +427,7 @@ def outputXML(data, filename = u'output.xml'):
     f.close()
     print u'Created %s' %filename
 
-def outputCatStat(data, filename = u'categoryStatistics.csv'):
+def outputCatStat(data, filename):
     '''output the category statistics in the desired format'''
     allCats = {}
     for k,v in data.iteritems():
@@ -478,6 +479,7 @@ def descriptionFiltering(description):
         
     return description.strip()
 
+#static helper functions
 def stripTag(text, t):
     '''given a string and a tag this strips out all occurences of this tag from the text
        assumes tag starts with "<tag" and ends "</tag>"
