@@ -1,5 +1,8 @@
+config.py
 *.rtf
 *.txt
 *.csv
 *.xml
+output/*
+*.log
 .~lock.*
