@@ -13,6 +13,10 @@ Additionally the data is outputed (along with a few unused fields) as a
 csv to allow for easier analysis/post-processing together with an analysis 
 of used categories and a logfile detailing potential problems in the data.
 
+For lazy/frequent use stick username/password on Wikimedia Commons into 
+config.py as variables user/password (in unicode). If not pressent then 
+getpass is imported and used to prompt for username and password.
+
 Usage: ```python Europeana.py filename option``` where:
 
 * ```filename``` (required): the (unicode)string relative pathname to the json file for the project
@@ -20,5 +24,6 @@ Usage: ```python Europeana.py filename option``` where:
   * ```verbose```: toggles on verbose mode with additional output to the terminal
   *  ```test```: toggles on testing (a verbose and limited run)
 
+Requires [WikiApi](https://github.com/lokal-profil/ODOK/blob/master/tools/WikiApi.py)
 
-Relies on WikiApi which is based on PyCJWiki Version 1.31 (C) by [Smallman12q](https://en.wikipedia.org/wiki/User_talk:Smallman12q) GPL, see http://www.gnu.org/licenses/.
+WikiApi is based on PyCJWiki Version 1.31 (C) by [Smallman12q](https://en.wikipedia.org/wiki/User_talk:Smallman12q) GPL, see http://www.gnu.org/licenses/.

@@ -32,6 +32,10 @@ Additionally the data is outputed (along with a few unused fields) as a
 csv to allow for easier analysis/post-processing together with an analysis 
 of used categories and a logfile detailing potential problems in the data.
 
+For lazy/frequent use stick username/password on Wikimedia Commons into 
+config.py as variables user/password (in unicode). If not pressent then 
+getpass is imported and used to prompt for username and password.
+
 Usage: python Europeana.py filename option
 \tfilename (required):\t the (unicode)string relative pathname to the json file for the project
 \toption (optional): can be set to:
