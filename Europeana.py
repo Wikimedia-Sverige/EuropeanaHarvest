@@ -6,20 +6,37 @@
 # 2014
 #
 # TODO:
-## resolve how to deal with credit/uploader/photographer
-## make sure no more TODOs
-## Add some aditional usage instructions in intro
-## How to deal with cropped tags in description?
+## getImageInfos() needs more error handling (based on api replies)
+## What to do if no obj['photographer'] but obj['uploader']?
+## make sure no more TODOs =)
 #
 # Known issues:
 ## Does not deal with multiple licenses - see /w/api.php?action=query&prop=imageinfo&format=json&iiprop=commonmetadata%7Cextmetadata&iilimit=1&titles=File%3AKalmar%20cathedral%20Kalmar%20Sweden%20001.JPG
 ## Only supports Template:Information
+## Although description is cropped to cc0Length the actual size might be larger (inclusion of closing tags) or smaller (removal of started tag definitions).
+## findOpenTags() assumes each tag is only opened once before closing
 #
 # Notes for future implementation of Template:Artwork - see /w/api.php?action=query&prop=imageinfo&format=json&iiprop=extmetadata&iilimit=1&titles=File%3AAivasovsky_Ivan_Constantinovich_caucasus_from_sea_1899_IBI.jpg
 ## ['extmetadata']['Artist'] referes to original creator (i.e. creator in xml) - For Template:Information Artist refers to photographer
 ## ['extmetadata']['Credit'] refers to source/photographer (i.e. photographer in xml)
 '''
 Script for harvesting metadata from Wikimedia Commons for the use in Europeana
+
+Given a (set of) categories on Commons along with templates and matching 
+patterns for external links in a json file (see examples in projects folder); 
+it queries the Commons API for metadata about the images and follows up 
+by investigating the templates used and external links on each filepage. 
+The resulting information is outputed to an xml file, per Europeana specifications.
+
+Additionally the data is outputed (along with a few unused fields) as a 
+csv to allow for easier analysis/post-processing together with an analysis 
+of used categories and a logfile detailing potential problems in the data.
+
+Usage: python Europeana.py filename option
+\tfilename (required):\t the (unicode)string relative pathname to the json file for the project
+\toption (optional): can be set to:
+\t\tverbose:\t toggles on verbose mode with additional output to the terminal
+\t\ttest:\t\t toggles on testing (a verbose and limited run)
 '''
 
 import codecs, ujson
@@ -112,7 +129,7 @@ class EuropeanaHarvester(object):
         #success
         return None
     
-    def __init__(self, project, test=False):
+    def __init__(self, project, verbose=False, test=False):
         '''Sets up environment, loads project file, triggers run/test
            Requires one parameter:
            project: the (unicode)string relative pathname to the project json file'''
@@ -150,9 +167,9 @@ class EuropeanaHarvester(object):
         
         #run
         if test:
-            runError = self.run(verbose=True, testing=True, debug=False)
+            runError = self.run(verbose=True, testing=True)
         else:
-            runError = self.run(verbose=False)
+            runError = self.run(verbose=verbose)
         
         if runError:
             self.log.write(u'Error during run: %s\n' %runError)
@@ -162,7 +179,7 @@ class EuropeanaHarvester(object):
         self.log.write(u'%s: Successfully reached end of run.\n' %datetime.datetime.utcnow())
         self.log.close()
     
-    def run(self, verbose=False, testing=False, debug=False):
+    def run(self, verbose=False, testing=False):
         '''Runs through the specified categories, sets up a dict with the imageinfo for each image
            then checks the parsed content for each image page to identify any of the specified id-templates
            and if found stores the associate sourcelink.
@@ -172,7 +189,7 @@ class EuropeanaHarvester(object):
         for basecat in self.baseCats:
             if verbose:
                 print u'Retrieving ImageInfo for %s...' %basecat
-            getImageInfosError = self.getImageInfos(basecat, imageInfo=imageInfo, debug=debug, verbose=verbose, testing=testing)
+            getImageInfosError = self.getImageInfos(basecat, imageInfo=imageInfo, verbose=verbose, testing=testing)
             if getImageInfosError:
                 self.log.write(u'Terminatiing: Error retrieving imageInfos: %s\n' %getImageInfosError)
                 #at this point we most likely do not want to continue
@@ -233,11 +250,10 @@ class EuropeanaHarvester(object):
             print u'Successfully reached end of run'
         return None
     
-    def getImageInfos(self, maincat, imageInfo={}, debug=False, verbose=False, testing=False):
+    def getImageInfos(self, maincat, imageInfo={}, verbose=False, testing=False):
         '''given a single category this queries the MediaWiki api for the parsed content of that page
            returns None on success otherwise an error message.'''
         #TODO needs more error handling (based on api replies)
-        #TODO Consider killing debug
         #Allows overriding gcmlimit for testing
         gcmlimit = self.gcmlimit
         if testing:
@@ -248,8 +264,6 @@ class EuropeanaHarvester(object):
         jsonr = self.wpApi.httpGET("query", [('prop', 'categoryinfo'),
                                         ('titles', maincat.encode('utf-8'))
                                        ])
-        if debug:
-            print u'getImageInfos() categoryinfo for: %s\n%s' %(maincat, jsonr)
         jsonr = jsonr['query']['pages'].iteritems().next()[1]
         #check for error
         if 'missing' in jsonr.keys():
@@ -269,8 +283,6 @@ class EuropeanaHarvester(object):
                                         ('gcmlimit', str(gcmlimit)),
                                         ('gcmtitle', maincat.encode('utf-8'))
                                        ])
-        if debug:
-            print u'getImageInfos() imageinfo for: %s\n%s' %(maincat, jsonr)
         #store (part of) the json
         imageInfo.update(jsonr['query']['pages']) # a dict where pageId is the key
         
@@ -298,15 +310,13 @@ class EuropeanaHarvester(object):
         #sucessfully reached end
         return None
     
-    def getContent(self, pageId, debug=False):
+    def getContent(self, pageId):
         '''given a pageId this queries the MediaWiki api for the parsed content of that page
            returns tuple (content, errorInfo) where errorInfo is None on success'''
         #/w/api.php?action=parse&format=json&pageid=27970534&prop=categories%7Ctemplates%7Cexternallinks
         jsonr = self.wpApi.httpGET("parse", [('prop', 'categories|templates|externallinks'),
                                         ('pageid', str(pageId))
                                        ])
-        if debug:
-            print u'getContent() pageId:%d \n%s' %(pageId, jsonr)
             
         #check for error
         if 'error' in jsonr.keys():
@@ -466,7 +476,7 @@ class EuropeanaHarvester(object):
                     v[kk] = ''
                 if kk in ['sourcelinks', 'categories']:
                     v[kk] = ';'.join(v[kk])
-                v[kk] = v[kk].replace('|','!').replace('\n',u'¤')
+                v[kk] = v[kk].replace('|','!').replace('\n',u' ')
             f.write(u'%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' %(v['mediatype'], v['created'], v['medialink'], v['uploader'], v['sourcelinks'], v['identifier'], v['categories'], v['copyright'], v['title'], v['photographer'], v['usageTerms'], v['credit'], v['description']))
         f.close()
     
@@ -612,11 +622,32 @@ class EuropeanaHarvester(object):
         
         #truncate at cc0Length characters and elipse with ...
         if len(description) > self.cc0Length:
-            cropped = description[(self.cc0Length-3):].strip()
-            if u'</' in cropped:
-                self.log.write('Cropped description for "%s": %s\n' %(title, cropped))
-            description = u'%s...' %description[:(self.cc0Length-3)]
-            
+            pos = self.cc0Length-3
+            cropped = description[pos:].strip()
+            #Need to be careful with cropped tags
+            if cropped.find('>') > 0:
+                if (cropped.find(u'<') < 0) or ( cropped.find(u'<') > 0 and ( cropped.find('>') < cropped.find(u'<') )):
+                    #found an open tag definition, search back to start of definition and truncate there.
+                    pos = description[:pos].rfind('<')
+                    if pos >=0: #if found
+                        description = u'%s...' %description[:pos]
+                    else:
+                        description = u'%s...' %description[:self.cc0Length-3]
+                        self.log.write('Cropped description may have mauled tags "%s": %s... | %s\n' %(title, description[:self.cc0Length-3].replace('\n',' '), description[self.cc0Length-3:].replace('\n',' ')))
+                elif cropped.find('</') > 0:
+                    #found a possibly unclosed tag
+                    unclosed = self.findOpenTags(cropped)
+                    closing = u''
+                    for t in unclosed:
+                        closing += u'</%s>' %t
+                    description = u'%s...%s' %(description[:pos],closing)
+                else:
+                    description = u'%s...' %description[:pos]
+                    self.log.write('Cropped description may have mauled tags "%s": %s... | %s\n' %(title, description[:pos].replace('\n',' '), description[pos:].replace('\n',' ')))
+            else:
+                description = u'%s...' %description[:pos]
+            #truncation complete
+        
         return description.strip()
     
     def creditFiltering(self, credit, title, templateFilter=True):
@@ -663,6 +694,29 @@ class EuropeanaHarvester(object):
                     text = text[:sp]+text[ep+len('</%s>' %t):] #strip out this occurence of the tag
         return text
     
+    def findOpenTags(self, text):
+        '''given a string this identifies any unclosed tags
+           returns a list of tags to close'''
+        #find all closing tags
+        findings = []
+        tClose = text.find('</')
+        while tClose > 0:
+            tag = text[tClose+len('</'):text.find('>',tClose)].strip()
+            tStart = text.find('<'+tag) #yes only find the first of these, if weirdly nested things are going on then someone else is to blame
+            findings.append({'tClose':tClose,'tag':tag,'tStart':tStart})
+            tClose = text.find('</', tClose+len('</'))
+        
+        #find unclosed tags
+        unclosed = []
+        for f in findings:
+            if f['tStart'] > 0 and f['tStart'] < f['tClose']:
+                #tag not opened yet
+                pass
+            else:
+                unclosed.append(f['tag'])
+        
+        return unclosed
+    
     @staticmethod
     def sortedDict(ddict):
         '''turns a dict into a sorted list of tuples'''
@@ -671,17 +725,21 @@ class EuropeanaHarvester(object):
 
 if __name__ == '__main__':
     import sys
+    usage = '''Usage: python Europeana.py filename option
+\tfilename (required):\t the (unicode)string relative pathname to the json file for the project
+\toption (optional): can be set to:
+\t\tverbose:\t toggles on verbose mode with additional output to the terminal
+\t\ttest:\t\t toggles on testing (a verbose and limited run)'''
     argv = sys.argv[1:]
     if len(argv) == 1:
-        EuropeanaHarvester(argv[0], test=False)
+        EuropeanaHarvester(argv[0])
     elif len(argv) == 2:
-        if argv[1] in ['True', 'true', 'test', 'Test']:
-            test = True
+        if argv[1] == 'test':
+            EuropeanaHarvester(argv[0], test=True)
+        elif argv[1] == 'verbose':
+            EuropeanaHarvester(argv[0], verbose=True)
         else:
-            test = False
-        EuropeanaHarvester(argv[0], test=test)
+            print usage
     else:
-        print '''Usage: python Europeana.py filename test
-        filename (required):\t the (unicode)string relative pathname to the json file for the project
-        test (optional):\t if set (to "test" or "True") this toggles on testing (a verbose and limited run)'''
+        print usage
 #EoF
