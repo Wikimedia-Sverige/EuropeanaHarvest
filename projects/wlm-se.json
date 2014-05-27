@@ -1,5 +1,5 @@
 {
-  "project-name": "wlm-se-2013",
+  "project-name": "wlm-se",
   "id-templates": {
     "Template:K-Fartyg": [
       "http:\/\/www.sjohistoriska.se\/sv\/Kusten-runt\/Fartyg--batar\/K-markning-av-fartyg\/K-markta-fartyg\/"
@@ -14,7 +14,9 @@
     ]
   },
   "base-categories": [
+    "Category:Images from Wiki Loves Monuments 2011 in Sweden",
+    "Category:Images from Wiki Loves Monuments 2012 in Sweden",
     "Category:Images from Wiki Loves Monuments 2013 in Sweden"
   ],
-  "output-pattern": "output/wlm-se-2013"
+  "output-pattern": "output/wlm-se"
 }
