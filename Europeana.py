@@ -5,15 +5,19 @@
 # License: MIT
 # 2014
 #
-# To do:
+# TODO:
 ## resolve how to deal with credit/uploader/photographer
-### rewsolve how to deal with templates in credit
-## resolve how to deal with links (in description)
-### should red links be treated differently.
 ## make sure no more TODOs
+## Add some aditional usage instructions in intro
+## How to deal with cropped tags in description?
+#
 # Known issues:
-## Does not deal with multiple licenses (see /w/api.php?action=query&prop=imageinfo&format=json&iiprop=commonmetadata%7Cextmetadata&iilimit=1&titles=File%3AKalmar%20cathedral%20Kalmar%20Sweden%20001.JPG)
+## Does not deal with multiple licenses - see /w/api.php?action=query&prop=imageinfo&format=json&iiprop=commonmetadata%7Cextmetadata&iilimit=1&titles=File%3AKalmar%20cathedral%20Kalmar%20Sweden%20001.JPG
 ## Only supports Template:Information
+#
+# Notes for future implementation of Template:Artwork - see /w/api.php?action=query&prop=imageinfo&format=json&iiprop=extmetadata&iilimit=1&titles=File%3AAivasovsky_Ivan_Constantinovich_caucasus_from_sea_1899_IBI.jpg
+## ['extmetadata']['Artist'] referes to original creator (i.e. creator in xml) - For Template:Information Artist refers to photographer
+## ['extmetadata']['Credit'] refers to source/photographer (i.e. photographer in xml)
 '''
 Script for harvesting metadata from Wikimedia Commons for the use in Europeana
 '''
@@ -39,6 +43,7 @@ class EuropeanaHarvester(object):
         self.creditFilterStrings = [u'<span class="int-own-work">Own work</span>',] #used for credits
         self.gcmlimit = 250 #Images to process per API request in ImageInfo
         self.logFilename = u'EuropeanaHarvester.log'
+        self.siteurl = 'https://commons.wikimedia.org'
     
     def loadProject(self, project):
         '''open projectfile and load variables
@@ -128,11 +133,10 @@ class EuropeanaHarvester(object):
         ##look for config file
         try:
             import config
-            self.wpApi = wikiApi.WikiApi.setUpApi(user=config.user, password=config.password, site=config.siteurl, scriptidentify=scriptidentify) 
+            self.wpApi = wikiApi.WikiApi.setUpApi(user=config.user, password=config.password, site=self.siteurl, scriptidentify=scriptidentify) 
         except ImportError:
             from getpass import getpass #not needed if config file exists
-            siteurl = 'https://commons.wikimedia.org'
-            self.wpApi = wikiApi.WikiApi.setUpApi(user=getpass(u'Username:'), password=getpass(), site=siteurl, scriptidentify=scriptidentify)
+            self.wpApi = wikiApi.WikiApi.setUpApi(user=getpass(u'Username:'), password=getpass(), site=self.siteurl, scriptidentify=scriptidentify)
         
         #Create output files (so that any errors occur before the actual run)
         try:
@@ -233,7 +237,7 @@ class EuropeanaHarvester(object):
         '''given a single category this queries the MediaWiki api for the parsed content of that page
            returns None on success otherwise an error message.'''
         #TODO needs more error handling (based on api replies)
-        #TODO Consider killing debug/testing
+        #TODO Consider killing debug
         #Allows overriding gcmlimit for testing
         gcmlimit = self.gcmlimit
         if testing:
@@ -348,8 +352,8 @@ class EuropeanaHarvester(object):
         
         #listing potentially interesting fields
         user        = imageJson['user'] #as backup for later field. Note that this is the latest uploader, not necessarily the original one.
-        obj['description'] = self.descriptionFiltering(imageJson['extmetadata']['ImageDescription']['value'].strip()) if u'ImageDescription' in imageJson['extmetadata'].keys() else None
-        obj['credit'] = self.creditFiltering(imageJson['extmetadata']['Credit']['value'].strip()) if u'Credit' in imageJson['extmetadata'].keys() else None #send straight to filtering
+        obj['description'] = self.descriptionFiltering(imageJson['extmetadata']['ImageDescription']['value'].strip(), title) if u'ImageDescription' in imageJson['extmetadata'].keys() else None
+        obj['credit'] = self.creditFiltering(imageJson['extmetadata']['Credit']['value'].strip(), title) if u'Credit' in imageJson['extmetadata'].keys() else None #send straight to filtering
         objectName  = imageJson['extmetadata']['ObjectName']['value'].strip() if u'ObjectName' in imageJson['extmetadata'].keys() else None
         datePlain   = imageJson['extmetadata']['DateTime']['value'].strip() if u'DateTime' in imageJson['extmetadata'].keys() else None
         dateDig     = imageJson['extmetadata']['DateTimeDigitized']['value'].strip() if u'DateTimeDigitized' in imageJson['extmetadata'].keys() else None
@@ -365,10 +369,11 @@ class EuropeanaHarvester(object):
         ## comapare user with artist
         obj['uploader'] = None #Only contains a value if not included in artist
         if artist:
-            obj['photographer'] = artist
+            obj['photographer'] = self.linkCleanup(artist)
             if not user in artist:
                 obj['uploader'] = user
         elif user: #if only uploader is given
+            ##TODO: should this be allowed?
             obj['photographer'] = None
             obj['uploader'] = user
         else: #no indication of creator
@@ -507,6 +512,18 @@ class EuropeanaHarvester(object):
                 child.text = v['created']
                 dc.append(child)
             
+            #description (with credit) - optional
+            if 'description' in v.keys() and v['description']: 
+                child = etree.Element('description')
+                child.text = v['description']
+                if 'credit' in v.keys() and v['credit']: 
+                    child.text += u'\nSource info: %s' %v['credit'].strip(' .,')
+                dc.append(child)
+            elif 'credit' in v.keys() and v['credit']: 
+                child = etree.Element('description')
+                child.text = u'Source info: %s' %v['credit'].strip(' .,')
+                dc.append(child)
+            
             #description - optional
             if 'description' in v.keys() and v['description']: 
                 child = etree.Element('description')
@@ -562,10 +579,28 @@ class EuropeanaHarvester(object):
         for k in sorted_allCats:
               f.write(u'%d|%s\n' %(k[1], k[0]))
         f.close()
+
+    def linkCleanup(self, text):
+        '''given a text which may contain links this cleans them up by removing internal classes
+           The primary objective of this is to make the description field shorter and the photographer field more uniform.
+        '''
+        linkClasses = [u'class="new"', u'class="extiw"', u'class="external free"', u'class="mw-redirect"']
+        redlink = {u'find':(u'&amp;action=edit&amp;redlink=1',u'/w/index.php?title='), u'replace':(u'',u'/wiki/')}
+        
+        #link classes - these can simply be replaced
+        for l in linkClasses:
+            text = text.replace(l,u'')
+        
+        #redlinks - first tuple needs to be present and is replaced by second tuple
+        if (redlink['find'][0] in text) and (redlink['find'][1] in text):
+            text = text.replace(redlink['find'][0],redlink['replace'][0]).replace(redlink['find'][1],redlink['replace'][1])
+        
+        return text.replace('  ',' ') #replacing double-whitespace
     
-    def descriptionFiltering(self, description):
+    def descriptionFiltering(self, description, title):
         '''given a description string this filters out any tags which likely indicate templates'''
         filtertags = ['div', 'table']
+        description = self.linkCleanup(description)
         
         for t in filtertags:
             #replace all occurences of tag
@@ -577,13 +612,18 @@ class EuropeanaHarvester(object):
         
         #truncate at cc0Length characters and elipse with ...
         if len(description) > self.cc0Length:
+            cropped = description[(self.cc0Length-3):].strip()
+            if u'</' in cropped:
+                self.log.write('Cropped description for "%s": %s\n' %(title, cropped))
             description = u'%s...' %description[:(self.cc0Length-3)]
             
         return description.strip()
     
-    def creditFiltering(self, credit, templateFilter=False):
+    def creditFiltering(self, credit, title, templateFilter=True):
         '''given a credit string this filters out strings known to be irrelevant
            returns: None if nothing relevant is left otherwise remaining text'''
+        credit = self.linkCleanup(credit)
+        
         for f in self.creditFilterStrings:
             credit = credit.replace(f,'')
             if len(credit.strip()) == 0:
@@ -591,11 +631,14 @@ class EuropeanaHarvester(object):
         
         #More advanced - do similar filtering as for descriptions
         if templateFilter:
+            oldCredit = credit #for the logs
             filtertags = ['div', 'table']
             for t in filtertags:
                 credit = self.stripTag(credit, t)
-                if len(credit.strip()) == 0:
-                    return None
+            if credit != oldCredit:
+                self.log.write('Removed tag from credit for "%s": %s\n' %(title, oldCredit.replace(credit,''))) #This alowes a post-process check that no relevant copyright information was removed
+            if len(credit.strip()) == 0:
+                return None
         return credit.strip()
     
     def stripTag(self, text, t):
