@@ -4,5 +4,6 @@ config.py
 *.csv
 *.xml
 output/*
+projects/*
 *.log
 .~lock.*
