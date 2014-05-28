@@ -546,11 +546,11 @@ class EuropeanaHarvester(object):
                 child = etree.Element('description')
                 child.text = v['description']
                 if 'credit' in v.keys() and v['credit']: 
-                    child.text += u'\nSource info: %s' %v['credit'].strip(' .,')
+                    child.text += u'\nSource info: %s' %v['credit']
                 dc.append(child)
             elif 'credit' in v.keys() and v['credit']: 
                 child = etree.Element('description')
-                child.text = u'Source info: %s' %v['credit'].strip(' .,')
+                child.text = u'Source info: %s' %v['credit']
                 dc.append(child)
             
             #category - optional, multiple
@@ -683,7 +683,7 @@ class EuropeanaHarvester(object):
                 self.log.write('Removed tag from credit for "%s": %s\n' %(title, oldCredit.replace(credit,'').replace('\n',' '))) #This allows a post-process check that no relevant copyright information was removed
             if len(credit.strip()) == 0:
                 return None
-        return credit.strip()
+        return credit.strip(' .,')
     
     def stripTag(self, text, t):
         '''given a string and a tag this strips out all occurences of this tag from the text
