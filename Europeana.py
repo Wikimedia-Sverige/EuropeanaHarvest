@@ -353,13 +353,13 @@ class EuropeanaHarvester(object):
         #checks prior to continuing
         if not imageJson['extmetadata']['CommonsMetadataExtension']['value'] == self.commonsMetadataExtension: #no guarantee that metadata is treated correctly if any other version
             #would probably want to stop whole process
-            return (True, u'This uses a different version of the commonsMetadataExtension than the one the script was designed for, terminating. Expected: %s; Found: %s' %(self.commonsMetadataExtension, imageJson['extmetadata']['CommonsMetadataExtension']['value']))
+            return (True, u'This uses a different version of the commonsMetadataExtension than the one the script was designed for. Expected: %s; Found: %s' %(self.commonsMetadataExtension, imageJson['extmetadata']['CommonsMetadataExtension']['value']))
         if not imageJson['mime'].split('/')[0].strip() == 'image': #check that it is really an image
             #would probably only want to skip this image (or deal with it)
-            return (False, u'%s is not an image but a %s, skipping' %(title, imageJson['mime'].split('/')[0].strip()))
+            return (False, u'%s is not an image but a %s' %(title, imageJson['mime'].split('/')[0].strip()))
         if pageId in self.data.keys(): #check if image already in dictionary
             #would probably only want to skip this image (or deal with it)
-            return (False, u'pageId (%s) already in data, skipping: old:%s new:%s' %(pageId, self.data[pageId]['title'], title))
+            return (False, u'pageId (%s) already in data: old:%s new:%s' %(pageId, self.data[pageId]['title'], title))
         
         #Prepare data object, not sent directly to data[pageId] in case errors are discovered downstream
         obj = {'title':title, 'medialink':imageJson['url'].strip(), 'identifier':imageJson['descriptionurl'].strip(), 'mediatype':'IMAGE'}
@@ -368,7 +368,6 @@ class EuropeanaHarvester(object):
         user        = imageJson['user'] #as backup for later field. Note that this is the latest uploader, not necessarily the original one.
         obj['description'] = self.descriptionFiltering(imageJson['extmetadata']['ImageDescription']['value'].strip(), title) if u'ImageDescription' in imageJson['extmetadata'].keys() else None
         obj['credit'] = self.creditFiltering(imageJson['extmetadata']['Credit']['value'].strip(), title) if u'Credit' in imageJson['extmetadata'].keys() else None #send straight to filtering
-        objectName  = imageJson['extmetadata']['ObjectName']['value'].strip() if u'ObjectName' in imageJson['extmetadata'].keys() else None
         datePlain   = imageJson['extmetadata']['DateTime']['value'].strip() if u'DateTime' in imageJson['extmetadata'].keys() else None
         dateDig     = imageJson['extmetadata']['DateTimeDigitized']['value'].strip() if u'DateTimeDigitized' in imageJson['extmetadata'].keys() else None
         dateOrig    = imageJson['extmetadata']['DateTimeOriginal']['value'].strip() if u'DateTimeOriginal' in imageJson['extmetadata'].keys() else None
@@ -378,6 +377,20 @@ class EuropeanaHarvester(object):
         artist      = imageJson['extmetadata']['Artist']['value'].strip() if u'Artist' in imageJson['extmetadata'].keys() else None
         obj['usageTerms'] = imageJson['extmetadata']['UsageTerms']['value'].strip() if u'UsageTerms' in imageJson['extmetadata'].keys() else None #does this ever contain anything useful?
         copyrighted = imageJson['extmetadata']['Copyrighted']['value'].strip() if u'Copyrighted' in imageJson['extmetadata'].keys() else None #if PD
+        
+        #apparently ObjectName can somhow be a dict - see /w/api.php?action=query&prop=imageinfo&format=json&iiprop=extmetadata&iilimit=1&titles=File%3AHova%20kyrka%202.jpg
+        #objectName  = imageJson['extmetadata']['ObjectName']['value'].strip() if u'ObjectName' in imageJson['extmetadata'].keys() else None
+        if u'ObjectName' in imageJson['extmetadata'].keys():
+            tmp = imageJson['extmetadata']['ObjectName']['value']
+            if type(tmp) == str or type(tmp) == unicode:
+                objectName  = imageJson['extmetadata']['ObjectName']['value'].strip()
+            elif type(tmp) == dict and '_' in tmp.keys():
+                objectName  = imageJson['extmetadata']['ObjectName']['value']['_'].strip()
+            else:
+                self.log.write(u'%s has dict as ObjectName but not "_" as key: %s\n'%(title, tmp))
+                objectName  = None
+        else:
+            objectName  = None
         
         #Post processing:
         ## comapare user with artist
@@ -391,19 +404,21 @@ class EuropeanaHarvester(object):
             obj['photographer'] = None
             obj['uploader'] = user
         else: #no indication of creator
-            return (False, u'%s did not have any information about the creator, skipping' %title)
+            return (False, u'%s did not have any information about the creator' %title)
         
         ## Deal with licenses
         if licenseurl:
             if licenseurl.startswith(u'http://creativecommons.org/licenses/'):
                 obj[u'copyright'] = licenseurl
+            elif licenseurl.startswith(u'http://creativecommons.org/publicdomain/'):
+                obj[u'copyright'] = pdMark
             else:
-                return (False, u'%s did not have a CC-license URL and is not public Domain, skipping: %s (%s)' %(title, licenseurl, licenseShortName))
+                return (False, u'%s did not have a CC-license URL and is not PD: %s (%s)' %(title, licenseurl, licenseShortName))
         else:
             if copyrighted == u'False':
                 obj[u'copyright'] = pdMark
             else:
-                return (False, u'%s did not have a license URL and is not public Domain, skipping: %s' %(title, licenseShortName))
+                return (False, u'%s did not have a license URL and is not PD: %s' %(title, licenseShortName))
         
         ## isolate date giving preference to dateOrig
         if dateOrig: #the date as described in the description
@@ -636,8 +651,8 @@ class EuropeanaHarvester(object):
                     if pos >=0: #if found
                         description = u'%s...' %description[:pos]
                     else:
-                        description = u'%s...' %description[:self.cc0Length-3]
                         self.log.write('Cropped description may have mauled tags "%s": %s... | %s\n' %(title, description[:self.cc0Length-3].replace('\n',' '), description[self.cc0Length-3:].replace('\n',' ')))
+                        description = u'%s...' %description[:self.cc0Length-3]
                 elif cropped.find('</') > 0:
                     #found a possibly unclosed tag
                     unclosed = self.findOpenTags(cropped)
@@ -646,8 +661,8 @@ class EuropeanaHarvester(object):
                         closing += u'</%s>' %t
                     description = u'%s...%s' %(description[:pos],closing)
                 else:
-                    description = u'%s...' %description[:pos]
                     self.log.write('Cropped description may have mauled tags "%s": %s... | %s\n' %(title, description[:pos].replace('\n',' '), description[pos:].replace('\n',' ')))
+                    description = u'%s...' %description[:pos]
             else:
                 description = u'%s...' %description[:pos]
             #truncation complete
@@ -671,7 +686,7 @@ class EuropeanaHarvester(object):
             for t in filtertags:
                 credit = self.stripTag(credit, t)
             if credit != oldCredit:
-                self.log.write('Removed tag from credit for "%s": %s\n' %(title, oldCredit.replace(credit,''))) #This alowes a post-process check that no relevant copyright information was removed
+                self.log.write('Removed tag from credit for "%s": %s\n' %(title, oldCredit.replace(credit,'').replace('\n',' '))) #This allows a post-process check that no relevant copyright information was removed
             if len(credit.strip()) == 0:
                 return None
         return credit.strip()
