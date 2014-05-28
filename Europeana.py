@@ -7,7 +7,8 @@
 #
 # TODO:
 ## getImageInfos() needs more error handling (based on api replies)
-## What to do if no obj['photographer'] but obj['uploader']?
+## Throw proper errors (instead of returning tuples
+## Externalise creditFilterStrings (would needs to reliably deal with linebreaks)
 ## make sure no more TODOs =)
 #
 # Known issues:
@@ -65,8 +66,10 @@ class EuropeanaHarvester(object):
         self.gcmlimit = 250 #Images to process per API request in ImageInfo
         self.logFilename = u'EuropeanaHarvester.log'
         self.siteurl = 'https://commons.wikimedia.org'
+        self._test_gcmlimit = 5
+        self._test_limit = 15
     
-    def loadProject(self, project):
+    def loadProject(self, project, test):
         '''open projectfile and load variables
            returns None on success otherwise it returns an error message'''
         #Projectfile must be uft-8 encoded json and correctly formated
@@ -97,6 +100,9 @@ class EuropeanaHarvester(object):
         elif (type(jsonr[p]) != str) and (type(jsonr[p]) != unicode):
             return u'Parameter "%s" in project file must be a (unicode)string' %p
         self.output = jsonr[p]
+        ##distingusih testdata
+        if test:
+            self.output += u'.test'
         
         ##base-categories
         p = u'base-categories'
@@ -141,13 +147,13 @@ class EuropeanaHarvester(object):
         self.loadVariables()
         self.log = codecs.open(self.logFilename, 'a', 'utf-8')
         self.data = {} #container for all the info, using pageid as its key
-        projError = self.loadProject(project)
+        projError = self.loadProject(project, test)
         if projError:
             self.log.write(u'Error loading project file: %s\n' %projError)
             exit(1)
         
         #confirm succesful load to log together with timestamp
-        self.log.write(u'-----------------------\n%s: Successfully loaded "%s" run.\n' %(datetime.datetime.utcnow(), self.projName))
+        self.log.write(u'-----------------------\n%s: Successfully loaded "%s" %srun.\n' %(datetime.datetime.utcnow(), self.projName, 'test ' if test else ''))
         
         #Connect to api
         scriptidentify = u'%s/%s' %(self.scriptname,self.scriptversion)
@@ -180,7 +186,7 @@ class EuropeanaHarvester(object):
             exit(1)
         
         #confirm sucessful ending to log together with timestamp
-        self.log.write(u'%s: Successfully reached end of run.\n' %datetime.datetime.utcnow())
+        self.log.write(u'%s: Successfully reached end of %srun.\n' %(datetime.datetime.utcnow(), 'test ' if test else ''))
         self.log.close()
     
     def run(self, verbose=False, testing=False):
@@ -261,7 +267,7 @@ class EuropeanaHarvester(object):
         #Allows overriding gcmlimit for testing
         gcmlimit = self.gcmlimit
         if testing:
-            gcmlimit = 5
+            gcmlimit = self._test_gcmlimit
         
         #test that category exists and check number of entries
         #/w/api.php?action=query&prop=categoryinfo&format=json&titles=Category%3AImages%20from%20Wiki%20Loves%20Monuments%202013%20in%20Sweden
@@ -308,7 +314,7 @@ class EuropeanaHarvester(object):
                                            ])
             #store (part of) json
             imageInfo.update(jsonr['query']['pages'])
-            if testing and counter >15:
+            if testing and counter >self._test_limit:
                 break #shorter runs for testing
         
         #sucessfully reached end
@@ -400,9 +406,10 @@ class EuropeanaHarvester(object):
             if not user in artist:
                 obj['uploader'] = user
         elif user: #if only uploader is given
-            ##TODO: should this be allowed?
+            #should this be allowed?
             obj['photographer'] = None
             obj['uploader'] = user
+            return (False, u'%s did not have any information about the creator apart from uploader (%s)' %(title,obj['uploader']))
         else: #no indication of creator
             return (False, u'%s did not have any information about the creator' %title)
         
