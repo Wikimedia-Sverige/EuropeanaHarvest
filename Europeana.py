@@ -553,12 +553,6 @@ class EuropeanaHarvester(object):
                 child.text = u'Source info: %s' %v['credit'].strip(' .,')
                 dc.append(child)
             
-            #description - optional
-            if 'description' in v.keys() and v['description']: 
-                child = etree.Element('description')
-                child.text = v['description']
-                dc.append(child)
-            
             #category - optional, multiple
             for c in v['categories']:
                 child = etree.Element('category')
