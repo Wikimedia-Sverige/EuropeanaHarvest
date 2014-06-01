@@ -61,13 +61,24 @@ class EuropeanaHarvester(object):
     def loadVariables(self):
         '''semi-stable variables which are not project specific'''
         self.dudCategories = ('Media needing categories',) #non-hidden maintanance categories, matched with startswith()
-        self.cc0Length = 200 #max alowed length of description field (for Europeana to claim CC0 on metadata
-        self.creditFilterStrings = [u'<span class="int-own-work">Own work</span>',] #used for credits
+        self.cc0Length = 200 #max alowed length of description field (for Europeana to claim CC0 on metadata)
         self.gcmlimit = 250 #Images to process per API request in ImageInfo
         self.logFilename = u'EuropeanaHarvester.log'
         self.siteurl = 'https://commons.wikimedia.org'
         self._test_gcmlimit = 5
         self._test_limit = 15
+        #self.creditFilterStrings = [u'<span class="int-own-work">Own work</span>',] #used for credits
+        #load creditFilterStrings file
+        try:
+            f = codecs.open(u'creditStrings.json', 'r', 'utf-8')
+            self.creditFilterStrings = ujson.load(f)['creditStrings']
+            f.close()
+        except IOError, e:
+            return u'Error opening creditFilterStrings file: %s' %e
+            exit(1)
+        except (ValueError, KeyError), e:
+            return u'Error processing creditFilterStrings file as the expected json. Are you sure it is still valid?: %s' %e
+            exit(1)
     
     def loadProject(self, project, test):
         '''open projectfile and load variables
@@ -144,8 +155,11 @@ class EuropeanaHarvester(object):
            Requires one parameter:
            project: the (unicode)string relative pathname to the project json file'''
         self.versionInfo()
-        self.loadVariables()
+        varErrors = self.loadVariables()
         self.log = codecs.open(self.logFilename, 'a', 'utf-8')
+        if varErrors:
+            self.log.write(u'%s\n' %varErrors)
+            exit(1)
         self.data = {} #container for all the info, using pageid as its key
         projError = self.loadProject(project, test)
         if projError:
