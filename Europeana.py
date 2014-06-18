@@ -169,9 +169,8 @@ class EuropeanaHarvester(object):
         #confirm succesful load to log together with timestamp
         self.log.write(u'-----------------------\n%s: Successfully loaded "%s" %srun.\n' %(datetime.datetime.utcnow(), self.projName, 'test ' if test else ''))
         
-        #Connect to api
+        #Look for config file and connect to api
         scriptidentify = u'%s/%s' %(self.scriptname,self.scriptversion)
-        ##look for config file
         try:
             import config
             self.wpApi = wikiApi.WikiApi.setUpApi(user=config.user, password=config.password, site=self.siteurl, scriptidentify=scriptidentify) 
@@ -185,7 +184,8 @@ class EuropeanaHarvester(object):
             self.fXML  = codecs.open(u'%s.xml' %self.output, 'w', 'utf-8')
             self.fCSV  = codecs.open(u'%s.csv' %self.output, 'w', 'utf-8')
         except IOError, e:
-            bla
+            self.log.write(u'Error creating output files: %s\n' %e)
+            exit(1)
         
         #ready to run
         
