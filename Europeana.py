@@ -413,7 +413,7 @@ class EuropeanaHarvester(object):
             objectName  = None
         
         #Post processing:
-        ## comapare user with artist
+        ## compare user with artist
         obj['uploader'] = None #Only contains a value if not included in artist
         if artist:
             obj['photographer'] = self.linkCleanup(artist)
@@ -444,7 +444,9 @@ class EuropeanaHarvester(object):
         ## isolate date giving preference to dateOrig
         if dateOrig: #the date as described in the description
             #format (timestamp is optional): <time class="dtstart" datetime="2013-08-26">26 August  2013</time>, 09:51:00
-            if dateOrig.startswith(u'<time class="dtstart" datetime='):
+            needle = u'<time class="dtstart" datetime='
+            if needle in dateOrig: 
+                dateOrig = dateOrig[dateOrig.find(needle):]
                 date = dateOrig.split('"')[3]
                 if len(dateOrig.split('>,'))==2:
                     date += dateOrig.split('>,')[1]
