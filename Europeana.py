@@ -7,7 +7,6 @@
 #
 # TODO:
 ## getImageInfos() needs more error handling (based on api replies)
-## Throw proper errors (instead of returning tuples
 ## Externalise creditFilterStrings (would needs to reliably deal with linebreaks)
 ## make sure no more TODOs =)
 #
@@ -67,6 +66,10 @@ class EuropeanaHarvester(object):
         self.siteurl = 'https://commons.wikimedia.org'
         self._test_gcmlimit = 5
         self._test_limit = 15
+        
+        #open logfile first to trigger any errors preventing us from handling later errors
+        self.log = codecs.open(self.logFilename, 'a', 'utf-8')
+
         #self.creditFilterStrings = [u'<span class="int-own-work">Own work</span>',] #used for credits
         #load creditFilterStrings file
         try:
@@ -74,15 +77,14 @@ class EuropeanaHarvester(object):
             self.creditFilterStrings = ujson.load(f)['creditStrings']
             f.close()
         except IOError, e:
-            return u'Error opening creditFilterStrings file: %s' %e
-            exit(1)
+            raise KillException(u'Error opening creditFilterStrings file: %s' %e)
         except (ValueError, KeyError), e:
-            return u'Error processing creditFilterStrings file as the expected json. Are you sure it is still valid?: %s' %e
-            exit(1)
+            raise KillException(u'Error processing creditFilterStrings file as the expected json. Are you sure it is still valid?: %s' %e)
     
     def loadProject(self, project, test):
         '''open projectfile and load variables
-           returns None on success otherwise it returns an error message'''
+           returns: Nothing
+           raises: KillException, IOError (for log file)'''
         #Projectfile must be uft-8 encoded json and correctly formated
         
         #load file
@@ -91,25 +93,25 @@ class EuropeanaHarvester(object):
             jsonr = ujson.load(f)
             f.close()
         except IOError, e:
-            return u'Error opening project file: %s' %e
+            raise KillException(u'Error opening project file: %s' %e)
         except ValueError, e: 
-            return u'Error processing project file as json. Are you sure it is valid?: %s' %e
+            raise KillException(u'Error processing project file as json. Are you sure it is valid?: %s' %e)
         
         #set project parameters
         ##name
         p = u'project-name'
         if not p in jsonr.keys():
-            return u'No "%s" in project file' %p
+            raise KillException(u'No "%s" in project file' %p)
         elif (type(jsonr[p]) != str) and (type(jsonr[p]) != unicode):
-            return u'Parameter "%s" in project file must be a (unicode)string' %p
+            raise KillException(u'Parameter "%s" in project file must be a (unicode)string' %p)
         self.projName = jsonr[p]
         
         ##output-pattern
         p = u'output-pattern'
         if not p in jsonr.keys():
-            return u'No "%s" in project file' %p
+            raise KillException(u'No "%s" in project file' %p)
         elif (type(jsonr[p]) != str) and (type(jsonr[p]) != unicode):
-            return u'Parameter "%s" in project file must be a (unicode)string' %p
+            raise KillException(u'Parameter "%s" in project file must be a (unicode)string' %p)
         self.output = jsonr[p]
         ##distingusih testdata
         if test:
@@ -119,14 +121,14 @@ class EuropeanaHarvester(object):
         p = u'base-categories'
         formaterror = u'Parameter "%s" in project file must be a list of (unicode)strings' %p
         if not p in jsonr.keys():
-            return u'No "%s" in project file' %p
+            raise KillException(u'No "%s" in project file' %p)
         elif type(jsonr[p]) != list:
-            return formaterror
+            raise KillException(formaterror)
         for s in jsonr[p]:
             if (type(s) != str) and (type(s) != unicode):
-                return formaterror
+                raise KillException(formaterror)
             if not s.startswith(u'Category:'):
-                return u'Category names must include "Category:"-prefix'
+                raise KillException(u'Category names must include "Category:"-prefix')
         self.baseCats = jsonr[p]
         
         ##id-templates
@@ -134,36 +136,35 @@ class EuropeanaHarvester(object):
         p = u'id-templates'
         formaterror = u'Parameter "%s" in project file must be a dictionary with template names as keys and lists of (unicode)strings as values' %p
         if not p in jsonr.keys():
-            return u'No "%s" in project file' %p
+            raise KillException(u'No "%s" in project file' %p)
         elif type(jsonr[p]) != dict:
-            return formaterror
+            raise KillException(formaterror)
         for k, v in jsonr[p].iteritems():
             if not k.startswith(u'Template:'):
-                return u'Template names must include "Template:"-prefix'
+                raise KillException(u'Template names must include "Template:"-prefix')
             if type(v) != list:
-                return formaterror
+                raise KillException(formaterror)
             for s in v:
                 if (type(s) != str) and (type(s) != unicode):
-                    return formaterror
+                    raise KillException(formaterror)
             self.idTemplates[k] = tuple(v)
-        
         #success
-        return None
     
     def __init__(self, project, verbose=False, test=False):
         '''Sets up environment, loads project file, triggers run/test
            Requires one parameter:
            project: the (unicode)string relative pathname to the project json file'''
         self.versionInfo()
-        varErrors = self.loadVariables()
-        self.log = codecs.open(self.logFilename, 'a', 'utf-8')
-        if varErrors:
+        try:
+            self.loadVariables() #also opens self.log
+        except KillException, e:
             self.log.write(u'%s\n' %varErrors)
             exit(1)
         self.data = {} #container for all the info, using pageid as its key
-        projError = self.loadProject(project, test)
-        if projError:
-            self.log.write(u'Error loading project file: %s\n' %projError)
+        try:
+            self.loadProject(project, test)
+        except KillException, e:
+            self.log.write(u'Error loading project file: %s\n' %e)
             exit(1)
         
         #confirm succesful load to log together with timestamp
@@ -188,16 +189,19 @@ class EuropeanaHarvester(object):
             exit(1)
         
         #ready to run
-        
-        #run
-        if test:
-            runError = self.run(verbose=True, testing=True)
-        else:
-            runError = self.run(verbose=verbose)
-        
-        if runError:
-            self.log.write(u'Error during run: %s\n' %runError)
+        try:
+            if test:
+                runError = self.run(verbose=True, testing=True)
+            else:
+                runError = self.run(verbose=verbose)
+        except KillException, e:
+            if verbose:
+                print u'Terminated prematurely, please check log file'
+            self.log.write(u'Error during run: %s\n' %e)
             exit(1)
+        else:
+            if verbose:
+                print u'Successfully reached end of run'
         
         #confirm sucessful ending to log together with timestamp
         self.log.write(u'%s: Successfully reached end of %srun.\n' %(datetime.datetime.utcnow(), 'test ' if test else ''))
@@ -213,13 +217,11 @@ class EuropeanaHarvester(object):
         for basecat in self.baseCats:
             if verbose:
                 print u'Retrieving ImageInfo for %s...' %basecat
-            getImageInfosError = self.getImageInfos(basecat, imageInfo=imageInfo, verbose=verbose, testing=testing)
-            if getImageInfosError:
-                self.log.write(u'Terminatiing: Error retrieving imageInfos: %s\n' %getImageInfosError)
-                #at this point we most likely do not want to continue
-                if verbose: 
-                    print u'Terminated prematurely, please check log file'
-                return u'Terminate'
+            try:
+                self.getImageInfos(basecat, imageInfo=imageInfo, verbose=verbose, testing=testing)
+            except KillException, e:
+                self.log.write(u'Terminating: Error retrieving imageInfos: %s\n' %e)
+                raise
         
         #parse all ImageInfos
         if verbose:
@@ -229,15 +231,13 @@ class EuropeanaHarvester(object):
             counter +=1
             if verbose and (counter%250)==0:
                 print u'parsed %d out of %d' %(counter, len(imageInfo))
-            errorType, errorMessage = self.parseImageInfo(v)
-            if errorType != None:
-                if errorType: #critical
-                    self.log.write(u'Terminating: error parsing imageInfos: %s\n' %errorMessage)
-                    if verbose:
-                        print u'Terminated prematurely, please check log file'
-                    return u'Terminate'
-                else: #minor
-                    self.log.write(u'Skipping: error parsing imageInfos: %s\n' %errorMessage)
+            try:
+                self.parseImageInfo(v)
+            except KillException, e:
+                self.log.write(u'Terminating: error parsing imageInfos: %s\n' %e)
+                raise
+            except SkipException, e:
+                self.log.write(u'Skipping: error parsing imageInfos: %s\n' %e)
         
         #add data from content
         if verbose:
@@ -249,14 +249,15 @@ class EuropeanaHarvester(object):
             if verbose and (counter%100)==0:
                 print u'Retrieved %d out of %d' %(counter, len(self.data))
             #get content for that pageID (can only retrieve one at a time)
-            content, getContentError = self.getContent(k)
-            if not getContentError:
-                getContentError = self.parseContent(k, content)
-                if not getContentError:
-                    continue
-            #only reached if encountered error
-            self.log.write(u'Error retrieving/parsing content for PageId %d (%s), removing from dataset: %s\n' %(k, self.data[k]['title'], getContentError))
-            unsupported.append(k)
+            try:
+                content = self.getContent(k)
+                self.parseContent(k, content)
+            except SkipException, e:
+                self.log.write(u'Error retrieving/parsing content for PageId %d (%s), removing from dataset: %s\n' %(k, self.data[k]['title'], e))
+                unsupported.append(k)
+            except KillException, e:
+                self.log.write(u'Serious error retrieving/parsing content for PageId %d (%s), terminating: %s\n' %(k, self.data[k]['title'], e))
+                raise
         
         #remove problematic entries
         for k in unsupported:
@@ -270,13 +271,11 @@ class EuropeanaHarvester(object):
             print u'Wrote to %s.xml, %s.csv and %s-CategoryStatistics.csv' %(self.output,self.output,self.output)
         
         #success
-        if verbose:
-            print u'Successfully reached end of run'
-        return None
     
     def getImageInfos(self, maincat, imageInfo={}, verbose=False, testing=False):
         '''given a single category this queries the MediaWiki api for the parsed content of that page
-           returns None on success otherwise an error message.'''
+           returns: Nothing
+           raises: KillException'''
         #TODO needs more error handling (based on api replies)
         #Allows overriding gcmlimit for testing
         gcmlimit = self.gcmlimit
@@ -291,7 +290,7 @@ class EuropeanaHarvester(object):
         jsonr = jsonr['query']['pages'].iteritems().next()[1]
         #check for error
         if 'missing' in jsonr.keys():
-            return u'The category "%s" does not exist' %maincat
+            raise KillException(u'The category "%s" does not exist' %maincat)
         total = jsonr['categoryinfo']['files']
         if verbose:
             print u'The category "%s" contains %d files and %d subcategories (the latter will not be checked)' %(maincat, total, jsonr['categoryinfo']['subcats'])
@@ -307,6 +306,7 @@ class EuropeanaHarvester(object):
                                         ('gcmlimit', str(gcmlimit)),
                                         ('gcmtitle', maincat.encode('utf-8'))
                                        ])
+        #TODO check for error, if found raise KillException
         #store (part of) the json
         imageInfo.update(jsonr['query']['pages']) # a dict where pageId is the key
         
@@ -326,17 +326,18 @@ class EuropeanaHarvester(object):
                                             ('gcmcontinue',jsonr['query-continue']['categorymembers']['gcmcontinue']),
                                             ('gcmtitle', maincat.encode('utf-8'))
                                            ])
+            #TODO check for error, if found raise KillException
             #store (part of) json
             imageInfo.update(jsonr['query']['pages'])
             if testing and counter >self._test_limit:
                 break #shorter runs for testing
         
         #sucessfully reached end
-        return None
     
     def getContent(self, pageId):
         '''given a pageId this queries the MediaWiki api for the parsed content of that page
-           returns tuple (content, errorInfo) where errorInfo is None on success'''
+           returns: content
+           raises: SkipException, KillException'''
         #/w/api.php?action=parse&format=json&pageid=27970534&prop=categories%7Ctemplates%7Cexternallinks
         jsonr = self.wpApi.httpGET("parse", [('prop', 'categories|templates|externallinks'),
                                         ('pageid', str(pageId))
@@ -344,18 +345,16 @@ class EuropeanaHarvester(object):
             
         #check for error
         if 'error' in jsonr.keys():
-            return (None, jsonr['error']['info'])
+            raise SkipException(jsonr['error']['info'])
         elif 'parse' in jsonr.keys():
-            return (jsonr['parse'], None)
+            return jsonr['parse']
         else:
-            return (None, u'API parse reply did not contain "error"-key but also not "parse"-key. Unexpected and probably means something went really wrong')
+            raise KillException(u'API parse reply did not contain "error"-key but also not "parse"-key. Unexpected and probably means something went really wrong')
     
     def parseImageInfo(self, imageJson):
         '''parse a single page in imageInfo reply from the API
-           returns: tuple (error-type, errorMessage) where:
-           * a successful test returns (None,None)
-           * a critical error (stopping the program) returns (True, Message)
-           * a minor error (skip this item) returns (False, Message)
+           returns: Nothing
+           raises: KillException, SkipException
         '''
         #Issues:
         ## Is more content validation needed?
@@ -373,13 +372,13 @@ class EuropeanaHarvester(object):
         #checks prior to continuing
         if not imageJson['extmetadata']['CommonsMetadataExtension']['value'] == self.commonsMetadataExtension: #no guarantee that metadata is treated correctly if any other version
             #would probably want to stop whole process
-            return (True, u'This uses a different version of the commonsMetadataExtension than the one the script was designed for. Expected: %s; Found: %s' %(self.commonsMetadataExtension, imageJson['extmetadata']['CommonsMetadataExtension']['value']))
+            raise KillException(u'This uses a different version of the commonsMetadataExtension than the one the script was designed for. Expected: %s; Found: %s' %(self.commonsMetadataExtension, imageJson['extmetadata']['CommonsMetadataExtension']['value']))
         if not imageJson['mime'].split('/')[0].strip() == 'image': #check that it is really an image
             #would probably only want to skip this image (or deal with it)
-            return (False, u'%s is not an image but a %s' %(title, imageJson['mime'].split('/')[0].strip()))
+            raise SkipException(u'%s is not an image but a %s' %(title, imageJson['mime'].split('/')[0].strip()))
         if pageId in self.data.keys(): #check if image already in dictionary
             #would probably only want to skip this image (or deal with it)
-            return (False, u'pageId (%s) already in data: old:%s new:%s' %(pageId, self.data[pageId]['title'], title))
+            raise SkipException(u'pageId (%s) already in data: old:%s new:%s' %(pageId, self.data[pageId]['title'], title))
         
         #Prepare data object, not sent directly to data[pageId] in case errors are discovered downstream
         obj = {'title':title, 'medialink':imageJson['url'].strip(), 'identifier':imageJson['descriptionurl'].strip(), 'mediatype':'IMAGE'}
@@ -423,9 +422,9 @@ class EuropeanaHarvester(object):
             #should this be allowed?
             obj['photographer'] = None
             obj['uploader'] = user
-            return (False, u'%s did not have any information about the creator apart from uploader (%s)' %(title,obj['uploader']))
+            raise SkipException(u'%s did not have any information about the creator apart from uploader (%s)' %(title,obj['uploader']))
         else: #no indication of creator
-            return (False, u'%s did not have any information about the creator' %title)
+            raise SkipException(u'%s did not have any information about the creator' %title)
         
         ## Deal with licenses
         if licenseurl:
@@ -434,12 +433,12 @@ class EuropeanaHarvester(object):
             elif licenseurl.startswith(u'http://creativecommons.org/publicdomain/'):
                 obj[u'copyright'] = pdMark
             else:
-                return (False, u'%s did not have a CC-license URL and is not PD: %s (%s)' %(title, licenseurl, licenseShortName))
+                raise SkipException(u'%s did not have a CC-license URL and is not PD: %s (%s)' %(title, licenseurl, licenseShortName))
         else:
             if copyrighted == u'False':
                 obj[u'copyright'] = pdMark
             else:
-                return (False, u'%s did not have a license URL and is not PD: %s' %(title, licenseShortName))
+                raise SkipException(u'%s did not have a license URL and is not PD: %s' %(title, licenseShortName))
         
         ## isolate date giving preference to dateOrig
         if dateOrig: #the date as described in the description
@@ -452,7 +451,7 @@ class EuropeanaHarvester(object):
                     date += dateOrig.split('>,')[1]
                 obj['created'] = date
             elif u'<time' in dateOrig: #weird
-                return (False, u'%s did not have a recognised datestamp: %s' %(title, dateOrig))
+                raise SkipException(u'%s did not have a recognised datestamp: %s' %(title, dateOrig))
             else: #just plain text
                 self.log.write(u'%s has plain text date: %s\n'%(title, dateOrig))
                 obj['created'] = dateOrig
@@ -471,13 +470,13 @@ class EuropeanaHarvester(object):
         
         #successfully reached the end
         self.data[pageId] = obj
-        return (None, None)
     
     def parseContent(self, pageId, contentJson):
         '''parse a single parse reply from the API
            with the aim of identifying the institution links, non-maintanance categories and used templates.
            adds to data: categories (list), sourcelinks (list)
-           returns: None on success otherwise an error message
+           returns: Nothing
+           raises: SkipException, KillException
            '''
         #structure up info as simple lists
         templates = []
@@ -496,7 +495,7 @@ class EuropeanaHarvester(object):
             if t in templates:
                 supported = True
         if not supported:
-            return u'Does not contain a supported information template'
+            raise SkipException(u'Does not contain a supported information template')
         
         #Isolate the source templates and identify the source links
         self.data[pageId][u'sourcelinks'] = []
@@ -507,7 +506,6 @@ class EuropeanaHarvester(object):
                         self.data[pageId][u'sourcelinks'].append(e)
         
         #successfully reached the end
-        return None
     
     def outputCSV(self, f):
         '''output the data as a csv for an easy overview. Also allows outputting more fields than are included in xml'''
@@ -629,6 +627,7 @@ class EuropeanaHarvester(object):
     def linkCleanup(self, text):
         '''given a text which may contain links this cleans them up by removing internal classes
            The primary objective of this is to make the description field shorter and the photographer field more uniform.
+           returns: cleaned up string
         '''
         linkClasses = [u'class="new"', u'class="extiw"', u'class="external free"', u'class="mw-redirect"']
         redlink = {u'find':(u'&amp;action=edit&amp;redlink=1',u'/w/index.php?title='), u'replace':(u'',u'/wiki/')}
@@ -644,7 +643,9 @@ class EuropeanaHarvester(object):
         return text.replace('  ',' ') #replacing double-whitespace
     
     def descriptionFiltering(self, description, title):
-        '''given a description string this filters out any tags which likely indicate templates'''
+        '''given a description string this filters out any tags which likely indicate templates
+        returns: trimmed description or None
+        '''
         filtertags = ['div', 'table']
         description = self.linkCleanup(description)
         
@@ -711,7 +712,7 @@ class EuropeanaHarvester(object):
     def stripTag(self, text, t):
         '''given a string and a tag this strips out all occurences of this tag from the text
            assumes tag starts with "<tag" and ends "</tag>"
-           returns stripped text'''
+           returns: stripped text'''
         if text.find('<%s' %t) >=0:
             #find all occurences of this tag
             startpos = []
@@ -732,7 +733,7 @@ class EuropeanaHarvester(object):
     
     def findOpenTags(self, text):
         '''given a string this identifies any unclosed tags
-           returns a list of tags to close'''
+           returns: a list of tags to close'''
         #find all closing tags
         findings = []
         tClose = text.find('</')
@@ -758,6 +759,14 @@ class EuropeanaHarvester(object):
         '''turns a dict into a sorted list of tuples'''
         sorted_ddict = sorted(ddict.iteritems(), key=operator.itemgetter(1), reverse=True)
         return sorted_ddict
+
+class KillException(Exception):
+    '''An exception which should terminate the process'''
+    pass
+
+class SkipException(Exception):
+    '''An exception which should skip the current item'''
+    pass
 
 if __name__ == '__main__':
     import sys
