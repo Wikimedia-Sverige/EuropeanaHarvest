@@ -191,20 +191,21 @@ class EuropeanaHarvester(object):
         #ready to run
         try:
             if test:
-                runError = self.run(verbose=True, testing=True)
+                self.run(verbose=True, testing=True)
             else:
-                runError = self.run(verbose=verbose)
+                self.run(verbose=verbose)
         except KillException, e:
             if verbose:
                 print u'Terminated prematurely, please check log file'
             self.log.write(u'Error during run: %s\n' %e)
             exit(1)
         else:
+            #confirm sucessful ending to log together with timestamp
             if verbose:
                 print u'Successfully reached end of run'
+            self.log.write(u'%s: Successfully reached end of %srun.\n' %(datetime.datetime.utcnow(), 'test ' if test else ''))
         
-        #confirm sucessful ending to log together with timestamp
-        self.log.write(u'%s: Successfully reached end of %srun.\n' %(datetime.datetime.utcnow(), 'test ' if test else ''))
+        #done
         self.log.close()
     
     def run(self, verbose=False, testing=False):
