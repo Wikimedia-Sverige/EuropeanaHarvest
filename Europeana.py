@@ -69,8 +69,7 @@ class EuropeanaHarvester(object):
         #open logfile first to trigger any errors preventing us from handling later errors
         self.log = codecs.open(self.logFilename, 'a', 'utf-8')
 
-        #self.creditFilterStrings = [u'<span class="int-own-work">Own work</span>',] #used for credits
-        #load creditFilterStrings file
+        #load creditFilterStrings file. Used to filter credits
         try:
             f = codecs.open(u'creditStrings.json', 'r', 'utf-8')
             self.creditFilterStrings = ujson.load(f)['creditStrings']
@@ -112,7 +111,7 @@ class EuropeanaHarvester(object):
         elif (type(jsonr[p]) != str) and (type(jsonr[p]) != unicode):
             raise KillException(u'Parameter "%s" in project file must be a (unicode)string' %p)
         self.output = jsonr[p]
-        ##distingusih testdata
+        ##distinguish testdata
         if test:
             self.output += u'.test'
         
@@ -276,7 +275,7 @@ class EuropeanaHarvester(object):
         '''given a single category this queries the MediaWiki api for the parsed content of that page
            returns: Nothing
            raises: KillException'''
-        #TODO needs more error handling (based on api replies)
+        #@TODO needs more error handling (based on api replies)
         #Allows overriding gcmlimit for testing
         gcmlimit = self.gcmlimit
         if testing:
@@ -306,7 +305,7 @@ class EuropeanaHarvester(object):
                                         ('gcmlimit', str(gcmlimit)),
                                         ('gcmtitle', maincat.encode('utf-8'))
                                        ])
-        #TODO check for error, if found raise KillException
+        #@TODO check for error, if found raise KillException
         #store (part of) the json
         imageInfo.update(jsonr['query']['pages']) # a dict where pageId is the key
         
@@ -326,7 +325,7 @@ class EuropeanaHarvester(object):
                                             ('gcmcontinue',jsonr['query-continue']['categorymembers']['gcmcontinue']),
                                             ('gcmtitle', maincat.encode('utf-8'))
                                            ])
-            #TODO check for error, if found raise KillException
+            #@TODO check for error, if found raise KillException
             #store (part of) json
             imageInfo.update(jsonr['query']['pages'])
             if testing and counter >self._test_limit:
@@ -356,17 +355,16 @@ class EuropeanaHarvester(object):
            returns: Nothing
            raises: KillException, SkipException
         '''
-        #Issues:
+        #@Issues:
         ## Is more content validation needed?
-        ## Filter out more credit stuff
-        ## filter out more description stuff
+        ## filter out more description stuff?
         pdMark = u'https://creativecommons.org/publicdomain/mark/1.0/'
         
         #outer info
         pageId = imageJson['pageid']
         title = imageJson['title'][len('File:'):].strip()
         
-        #swithch to inner info
+        #switch to inner info
         imageJson = imageJson['imageinfo'][0]
         
         #checks prior to continuing
@@ -419,7 +417,7 @@ class EuropeanaHarvester(object):
             if not user in artist:
                 obj['uploader'] = user
         elif user: #if only uploader is given
-            #should this be allowed?
+            #currently not allowed
             obj['photographer'] = None
             obj['uploader'] = user
             raise SkipException(u'%s did not have any information about the creator apart from uploader (%s)' %(title,obj['uploader']))
@@ -427,6 +425,7 @@ class EuropeanaHarvester(object):
             raise SkipException(u'%s did not have any information about the creator' %title)
         
         ## Deal with licenses
+        ## Only CC-licenses and PD allowed
         if licenseurl:
             if licenseurl.startswith(u'http://creativecommons.org/licenses/'):
                 obj[u'copyright'] = licenseurl
