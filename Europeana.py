@@ -496,7 +496,7 @@ class EuropeanaHarvester(object):
             if t in templates:
                 supported = True
         if not supported:
-            raise SkipException(u'Does not contain a supported information template')
+            raise SkipException(u'Does not contain one of the supported information templates: %s' %', '.join(self.infoTemplate))
         
         #Isolate the source templates and identify the source links
         self.data[pageId][u'sourcelinks'] = []
