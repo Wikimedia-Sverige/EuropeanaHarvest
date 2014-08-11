@@ -5,9 +5,8 @@
 # License: MIT
 # 2014
 #
-# TODO:
+# @TODO:
 ## getImageInfos() needs more error handling (based on api replies)
-## Externalise creditFilterStrings (would needs to reliably deal with linebreaks)
 ## make sure no more TODOs =)
 #
 # Known issues:
