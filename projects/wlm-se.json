@@ -1,4 +1,7 @@
 {
+  "@metadata": {
+    "description": "Wiki Loves Monuments in Sweden 2011-2013"
+  },
   "project-name": "wlm-se",
   "id-templates": {
     "Template:K-Fartyg": [
