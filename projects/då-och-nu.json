@@ -1,0 +1,16 @@
+{
+  "@metadata": {
+    "description": "Då och Nu in Sweden 2014"
+  },
+  "project-name": "då-och-nu-2014",
+  "id-templates": {
+    "Template:Då och Nu": [
+      "http:\/\/europeana.eu\/portal\/record\/",
+      "http:\/\/www.europeana.eu\/portal\/record\/"
+    ]
+  },
+  "base-categories": [
+    "Category:Då och Nu images"
+  ],
+  "output-pattern": "output/då-och-nu-2014"
+}
