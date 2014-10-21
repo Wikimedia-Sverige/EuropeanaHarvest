@@ -156,7 +156,7 @@ class EuropeanaHarvester(object):
         try:
             self.loadVariables() #also opens self.log
         except KillException, e:
-            self.log.write(u'%s\n' %varErrors)
+            self.log.write(u'%s\n' % e)
             exit(1)
         self.data = {} #container for all the info, using pageid as its key
         try:
@@ -394,6 +394,8 @@ class EuropeanaHarvester(object):
         artist      = imageJson['extmetadata']['Artist']['value'].strip() if u'Artist' in imageJson['extmetadata'].keys() else None
         obj['usageTerms'] = imageJson['extmetadata']['UsageTerms']['value'].strip() if u'UsageTerms' in imageJson['extmetadata'].keys() else None #does this ever contain anything useful?
         copyrighted = imageJson['extmetadata']['Copyrighted']['value'].strip() if u'Copyrighted' in imageJson['extmetadata'].keys() else None #if PD
+        obj['lat'] = imageJson['extmetadata']['GPSLatitude']['value'].strip() if u'GPSLatitude' in imageJson['extmetadata'].keys() else None #if no GPS
+        obj['lon'] = imageJson['extmetadata']['GPSLongitude']['value'].strip() if u'GPSLongitude' in imageJson['extmetadata'].keys() else None #if no GPS
         
         #apparently ObjectName can somhow be a dict - see /w/api.php?action=query&prop=imageinfo&format=json&iiprop=extmetadata&iilimit=1&titles=File%3AHova%20kyrka%202.jpg
         #objectName  = imageJson['extmetadata']['ObjectName']['value'].strip() if u'ObjectName' in imageJson['extmetadata'].keys() else None
@@ -516,7 +518,7 @@ class EuropeanaHarvester(object):
                 if kk in ['sourcelinks', 'categories']:
                     v[kk] = ';'.join(v[kk])
                 v[kk] = v[kk].replace('|','!').replace('\n',u' ')
-            f.write(u'%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' %(v['mediatype'], v['created'], v['medialink'], v['uploader'], v['sourcelinks'], v['identifier'], v['categories'], v['copyright'], v['title'], v['photographer'], v['usageTerms'], v['credit'], v['description']))
+            f.write(u'%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' %(v['mediatype'], v['created'], v['medialink'], v['uploader'], v['sourcelinks'], v['identifier'], v['categories'], v['copyright'], v['title'], v['photographer'], v['usageTerms'], v['credit'], v['description'], v['lat'], v['lon']))
         f.close()
     
     def outputXML(self, f):
@@ -598,6 +600,15 @@ class EuropeanaHarvester(object):
             child = etree.Element('type')
             child.text = v['mediatype']
             dc.append(child)
+            
+            #coordinates - optional
+            if 'lat' in v.keys() and 'lon' in v.keys() and v['lat'] and v['lon']:
+                child = etree.Element('latitude')
+                child.text = v['lat']
+                dc.append(child)
+                child = etree.Element('longitude')
+                child.text = v['lon']
+                dc.append(child)
             
             #end of single dc-element
             f.write(etree.tostring(dc, pretty_print=True, encoding='unicode').replace(u' xmlns:dc="dummy"',''))
