@@ -42,6 +42,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/e/e7/Storgatan_43_G%C3%B6teborg_2.JPG</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>57.701087</latitude>
+  <longitude>11.971280</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Fr%C3%B6lunda_kulturhus,_augusti_2014.jpg</identifier>
@@ -97,6 +99,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/b/b8/Latinskolan_kanalen_malmo_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.602184</latitude>
+  <longitude>13.004322</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Herkulesgatan_mot_v%C3%A4ster.jpg</identifier>
@@ -113,6 +117,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/c/c2/Herkulesgatan_mot_v%C3%A4ster.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>57.712488</latitude>
+  <longitude>11.939577</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Brantingstorg_i_Uppsala.JPG</identifier>
@@ -127,6 +133,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/6/66/Brantingstorg_i_Uppsala.JPG</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>59.868053</latitude>
+  <longitude>17.670225</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Saluhallen_Norrk%C3%B6ping_02.jpg</identifier>
@@ -135,6 +143,7 @@
   <photographer>&lt;a href="//commons.wikimedia.org/wiki/User:Homyy" title="User:Homyy (page does not exist)"&gt;Human Golmohammadi&lt;/a&gt;</photographer>
   <created>2014-09-03 15:44:58</created>
   <category>Då och Nu images</category>
+  <category>Norrköping</category>
   <link>https://commons.wikimedia.org/wiki/File:Saluhallen_Norrk%C3%B6ping_02.jpg</link>
   <medialink>https://upload.wikimedia.org/wikipedia/commons/9/99/Saluhallen_Norrk%C3%B6ping_02.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
@@ -154,6 +163,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/c/c6/Kvarteret_Kolumbus.JPG</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>57.695430</latitude>
+  <longitude>11.930732</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:G%C3%B6teborg2014_Kippgatan7.jpg</identifier>
@@ -182,6 +193,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/e/e8/Regementsgatan_och_Fridhem_Malm%C3%B6_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.597753</latitude>
+  <longitude>12.970816</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Telefonstationen_Drottningatan_Malm%C3%B6_2014.jpg</identifier>
@@ -196,6 +209,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/0/0a/Telefonstationen_Drottningatan_Malm%C3%B6_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.601305</latitude>
+  <longitude>13.001597</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:G%C3%B6teborg2014_Blick_mot_F%C3%A4rjen%C3%A4s.JPG</identifier>
@@ -219,6 +234,7 @@
   <created>2014-09-03 15:44:58</created>
   <description>Stadstornet/Stadsmiljö med Sankt Olai kyrkas klocktorn</description>
   <category>Då och Nu images</category>
+  <category>Norrköping</category>
   <link>https://commons.wikimedia.org/wiki/File:Stadstornet_Norrk%C3%B6ping.jpg</link>
   <medialink>https://upload.wikimedia.org/wikipedia/commons/f/ff/Stadstornet_Norrk%C3%B6ping.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
@@ -238,6 +254,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/f/f0/Storgatan_43_G%C3%B6teborg.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>57.701513</latitude>
+  <longitude>11.971257</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Ramundberget.jpg</identifier>
@@ -252,6 +270,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/e/e3/Ramundberget.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>62.700187</latitude>
+  <longitude>12.378817</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Predikstol_Hedemora_kyrka.jpg</identifier>
@@ -268,6 +288,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/b/b5/Predikstol_Hedemora_kyrka.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>60.277611</latitude>
+  <longitude>15.991889</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Holmens_bruk_Norrk%C3%B6ping_01.jpg</identifier>
@@ -296,6 +318,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/c/c1/Svenska_H%C3%B6garna_June_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>59.442675</latitude>
+  <longitude>19.501847</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Stagneliusskolan_(Kalmar_allm%C3%A4nna_l%C3%A4roverk).JPG</identifier>
@@ -365,6 +389,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/d/de/F%C3%B6reningsgatan_R%C3%B6rsjostaden_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.600196</latitude>
+  <longitude>13.012251</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Holmens_bruk_Norrk%C3%B6ping_03.jpg</identifier>
@@ -373,6 +399,7 @@
   <photographer>&lt;a href="//commons.wikimedia.org/wiki/User:Homyy" title="User:Homyy (page does not exist)"&gt;Human Golmohammadi&lt;/a&gt;</photographer>
   <created>2014-09-03 15:44:58</created>
   <category>Då och Nu images</category>
+  <category>Norrköping</category>
   <link>https://commons.wikimedia.org/wiki/File:Holmens_bruk_Norrk%C3%B6ping_03.jpg</link>
   <medialink>https://upload.wikimedia.org/wikipedia/commons/7/73/Holmens_bruk_Norrk%C3%B6ping_03.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
@@ -391,6 +418,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/3/3d/Hudiksvall_July_2014_14.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>61.726847</latitude>
+  <longitude>17.108078</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Bruksvallarna.jpg</identifier>
@@ -434,6 +463,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/9/97/Sankt_Eriksplan_2014.JPG</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>59.341100</latitude>
+  <longitude>18.038000</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Kalmar_domkyrka_mot_nordv%C3%A4st.JPG</identifier>
@@ -487,6 +518,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/0/0e/Koppardalen_2014-09-10_01.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>60.147750</latitude>
+  <longitude>16.172917</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Saluhallen_Norrk%C3%B6ping_01.jpg</identifier>
@@ -495,6 +528,7 @@
   <photographer>&lt;a href="//commons.wikimedia.org/wiki/User:Homyy" title="User:Homyy (page does not exist)"&gt;Human Golmohammadi&lt;/a&gt;</photographer>
   <created>2014-09-03 15:44:58</created>
   <category>Då och Nu images</category>
+  <category>Norrköping</category>
   <link>https://commons.wikimedia.org/wiki/File:Saluhallen_Norrk%C3%B6ping_01.jpg</link>
   <medialink>https://upload.wikimedia.org/wikipedia/commons/7/7f/Saluhallen_Norrk%C3%B6ping_01.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
@@ -535,10 +569,14 @@
   <description>Norra Vallgatan Malmö och Gamla Hovrätten</description>
   <category>Då och Nu images</category>
   <category>Gamla Hovrätten, Malmö</category>
+  <category>2014 in Malmö</category>
+  <category>July 2014 in Sweden</category>
   <link>https://commons.wikimedia.org/wiki/File:Norra_vallgatan_100_malmo_2014.jpg</link>
   <medialink>https://upload.wikimedia.org/wikipedia/commons/f/ff/Norra_vallgatan_100_malmo_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.606536</latitude>
+  <longitude>12.994591</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Tj%C3%A4rhovet-_Kalmar.JPG</identifier>
@@ -579,6 +617,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/4/43/Adelgatan_9_Malm%C3%B6_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.607222</latitude>
+  <longitude>13.000378</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Sly_p%C3%A5_herkulesgatan.JPG</identifier>
@@ -593,6 +633,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/8/8c/Sly_p%C3%A5_herkulesgatan.JPG</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>57.712700</latitude>
+  <longitude>11.927997</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Fiskehamnsgatan_Malm%C3%B6_2014.jpg</identifier>
@@ -607,6 +649,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/c/c8/Fiskehamnsgatan_Malm%C3%B6_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.607597</latitude>
+  <longitude>12.998883</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Stads%C3%A4ga_4090-4091_Herkulesgatan_01.JPG</identifier>
@@ -623,6 +667,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/1/1b/Stads%C3%A4ga_4090-4091_Herkulesgatan_01.JPG</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>57.712442</latitude>
+  <longitude>11.928122</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Gustaf_Adolfs_Torg,_G%C3%B6teborg,_2014-08-23.jpg</identifier>
@@ -680,6 +726,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/6/6f/Interior_Malm%C3%B6_centralstation_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.609421</latitude>
+  <longitude>12.999677</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Hudiksvall_July_2014.jpg</identifier>
@@ -694,6 +742,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/6/6a/Hudiksvall_July_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/4.0</copyright>
   <type>IMAGE</type>
+  <latitude>61.726847</latitude>
+  <longitude>17.108078</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Fr%C3%B6lunda_torg_2014-08-23_B.jpg</identifier>
@@ -736,6 +786,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/7/77/Sl%C3%B6jdverkstaden_p%C3%A5_Murberget.JPG</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>62.644701</latitude>
+  <longitude>17.927264</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Malm%C3%B6_hamn_skeppet_Bore_samt_fyr_2014.jpg</identifier>
@@ -751,6 +803,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/1/15/Malm%C3%B6_hamn_skeppet_Bore_samt_fyr_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.614008</latitude>
+  <longitude>12.995868</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Fridhemsplan_-_gr%C3%B6n_linje_s%C3%B6derut.JPG</identifier>
@@ -784,7 +838,7 @@
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:G%C3%B6teborg2014_Sankta_Birgittas_kapell.jpg</identifier>
-  <sourcelink>http://www.europeana.eu/portal/record/91622/raa_kmb_16001000011057.html?start=7&amp;query=sankta+birgittas+kapell&amp;startPage=1&amp;rows=24</sourcelink>
+  <sourcelink>http://www.europeana.eu/portal/record/91622/raa_kmb_16001000011057.html</sourcelink>
   <title>Göteborg2014 Sankta Birgittas kapell</title>
   <photographer>&lt;a href="//commons.wikimedia.org/wiki/User:Jolliro" title="User:Jolliro"&gt;K. Namuth &amp;amp; H. Finnilä&lt;/a&gt;</photographer>
   <created>2014-08-10 15:47:18</created>
@@ -810,6 +864,8 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/7/70/Norra_vallgatan_Malm%C3%B6_2014.jpg</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>55.607978</latitude>
+  <longitude>13.002445</longitude>
 </dc:dc>
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:Vallgraven_vid_judiska_f%C3%B6rsamlingen.JPG</identifier>
@@ -825,4 +881,6 @@
   <medialink>https://upload.wikimedia.org/wikipedia/commons/e/e0/Vallgraven_vid_judiska_f%C3%B6rsamlingen.JPG</medialink>
   <copyright>http://creativecommons.org/licenses/by-sa/3.0</copyright>
   <type>IMAGE</type>
+  <latitude>57.705965</latitude>
+  <longitude>11.973253</longitude>
 </dc:dc>
