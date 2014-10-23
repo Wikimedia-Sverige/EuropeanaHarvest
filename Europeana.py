@@ -401,8 +401,8 @@ class EuropeanaHarvester(object):
         artist      = imageJson['extmetadata']['Artist']['value'].strip() if u'Artist' in imageJson['extmetadata'].keys() else None
         obj['usageTerms'] = imageJson['extmetadata']['UsageTerms']['value'].strip() if u'UsageTerms' in imageJson['extmetadata'].keys() else None  # does this ever contain anything useful?
         copyrighted = imageJson['extmetadata']['Copyrighted']['value'].strip() if u'Copyrighted' in imageJson['extmetadata'].keys() else None  # if PD
-        obj['lat']  = imageJson['extmetadata']['GPSLatitude']['value'].strip() if u'GPSLatitude' in imageJson['extmetadata'].keys() else None  # if no GPS
-        obj['lon']  = imageJson['extmetadata']['GPSLongitude']['value'].strip() if u'GPSLongitude' in imageJson['extmetadata'].keys() else None  # if no GPS
+        obj['lat']  = imageJson['extmetadata']['GPSLatitude']['value'] if u'GPSLatitude' in imageJson['extmetadata'].keys() else None  # if no GPS
+        obj['lon']  = imageJson['extmetadata']['GPSLongitude']['value'] if u'GPSLongitude' in imageJson['extmetadata'].keys() else None  # if no GPS
         
         # apparently ObjectName can somhow be a dict - see /w/api.php?action=query&prop=imageinfo&format=json&iiprop=extmetadata&iilimit=1&titles=File%3AHova%20kyrka%202.jpg
         # objectName  = imageJson['extmetadata']['ObjectName']['value'].strip() if u'ObjectName' in imageJson['extmetadata'].keys() else None
@@ -417,6 +417,14 @@ class EuropeanaHarvester(object):
                 objectName = None
         else:
             objectName = None
+        
+        # apparently GPSLatitude/GPSLongitude can be either string or float
+        # as a result we must convert to string before we can strip it
+        for k in ['lat','lon']:
+            if obj[k]:  # if not None
+                if type(obj[k]) == float:
+                    obj[k] = str(obj[k])
+                obj[k] = obj[k].strip()
         
         # Post processing:
         # compare user with artist
@@ -523,6 +531,9 @@ class EuropeanaHarvester(object):
             for kk, vv in v.iteritems():
                 if vv is None:
                     v[kk] = ''
+                elif type(vv) != str:  # because apparently this can also be the case
+                    self.log.write(u'Found non-string value for %s in %s' % (kk, v['title']))
+                    v[kk] = str(vv)
                 if kk in ['sourcelinks', 'categories']:
                     v[kk] = ';'.join(v[kk])
                 v[kk] = v[kk].replace('|', '!').replace('\n', u' ')
@@ -531,7 +542,7 @@ class EuropeanaHarvester(object):
     
     def outputXML(self, f):
         '''output the data as xml acording to the desired format'''
-        NSMAP = {"dc": 'dummy'}  # lxml requieres namespaces to be declared, Europeana want's them stripped (se latter replacement)
+        NSMAP = {"dc": 'dummy'}  # lxml requieres namespaces to be declared, Europeana wants them stripped (see later replacement)
         
         # proper declaration does not play nice with unicode
         f.write(u"<?xml version='1.0' encoding='UTF-8'?>\n")
