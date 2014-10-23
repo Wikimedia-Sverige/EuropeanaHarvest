@@ -533,7 +533,9 @@ class EuropeanaHarvester(object):
         '''output the data as xml acording to the desired format'''
         NSMAP = {"dc": 'dummy'}  # lxml requieres namespaces to be declared, Europeana want's them stripped (se latter replacement)
         
-        f.write(u"<?xml version='1.0' encoding='UTF-8'?>\n")  # proper declaration does not play nice with unicode
+        # proper declaration does not play nice with unicode
+        f.write(u"<?xml version='1.0' encoding='UTF-8'?>\n")
+        f.write(u"<output xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n")
         
         for k, v in self.data.iteritems():
             dc = etree.Element('{dummy}dc', nsmap=NSMAP)
@@ -622,6 +624,7 @@ class EuropeanaHarvester(object):
             f.write(etree.tostring(dc, pretty_print=True, encoding='unicode').replace(u' xmlns:dc="dummy"', ''))
         
         # end of all dc-elements
+        f.write(u'</output>')
         f.close()
     
     def outputCatStat(self, f):

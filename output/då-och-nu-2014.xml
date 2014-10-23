@@ -1,4 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
+<output xmlns:dc="http://purl.org/dc/elements/1.1/">
 <dc:dc>
   <identifier>https://commons.wikimedia.org/wiki/File:G%C3%B6teborg2014_Klippans_f%C3%A4rjel%C3%A4ge_-_Sj%C3%B6magasinet.jpg</identifier>
   <sourcelink>http://europeana.eu/portal/record/91674/GSM_delobjekt_709526.html</sourcelink>
@@ -884,3 +885,4 @@
   <latitude>57.705965</latitude>
   <longitude>11.973253</longitude>
 </dc:dc>
+</output>
