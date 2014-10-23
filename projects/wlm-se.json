@@ -1,6 +1,6 @@
 {
   "@metadata": {
-    "description": "Wiki Loves Monuments in Sweden 2011-2013"
+    "description": "Wiki Loves Monuments in Sweden 2011-2014"
   },
   "project-name": "wlm-se",
   "id-templates": {
@@ -14,12 +14,14 @@
     ],
     "Template:Fornminne": [
       "http:\/\/kulturarvsdata.se\/raa\/fmi\/html\/"
-    ]
+    ],
+    "Template:Arbetslivsmuseum": []
   },
   "base-categories": [
     "Category:Images from Wiki Loves Monuments 2011 in Sweden",
     "Category:Images from Wiki Loves Monuments 2012 in Sweden",
-    "Category:Images from Wiki Loves Monuments 2013 in Sweden"
+    "Category:Images from Wiki Loves Monuments 2013 in Sweden",
+    "Category:Images from Wiki Loves Monuments 2014 in Sweden"
   ],
   "output-pattern": "output/wlm-se"
 }
