@@ -316,6 +316,7 @@ class EuropeanaHarvester(object):
                                         ('generator', 'categorymembers'),
                                         ('gcmprop', 'title'),
                                         ('gcmnamespace', '6'),
+                                        ('rawcontinue', ''),
                                         ('gcmlimit', str(gcmlimit)),
                                         ('gcmtitle', maincat.encode('utf-8'))
                                        ])
@@ -335,6 +336,7 @@ class EuropeanaHarvester(object):
                                             ('generator', 'categorymembers'),
                                             ('gcmprop', 'title'),
                                             ('gcmnamespace', '6'),
+                                            ('rawcontinue', ''),
                                             ('gcmlimit', str(gcmlimit)),
                                             ('gcmcontinue', jsonr['query-continue']['categorymembers']['gcmcontinue']),
                                             ('gcmtitle', maincat.encode('utf-8'))
