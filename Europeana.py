@@ -47,7 +47,7 @@ Usage: python Europeana.py filename option
 '''
 
 import codecs
-import ujson
+import json
 import datetime  # for timestamps  in log
 import operator  # only used by categoryStatistics
 import WikiApi as wikiApi
@@ -78,7 +78,7 @@ class EuropeanaHarvester(object):
         # load creditFilterStrings file. Used to filter credits
         try:
             f = codecs.open(u'creditStrings.json', 'r', 'utf-8')
-            self.creditFilterStrings = ujson.load(f)['creditStrings']
+            self.creditFilterStrings = json.load(f)['creditStrings']
             f.close()
         except IOError, e:
             raise KillException(u'Error opening creditFilterStrings file: %s' % e)
@@ -96,7 +96,7 @@ class EuropeanaHarvester(object):
         # load file
         try:
             f = codecs.open(project, 'r', 'utf-8')
-            jsonr = ujson.load(f)
+            jsonr = json.load(f)
             f.close()
         except IOError, e:
             raise KillException(u'Error opening project file: %s' % e)
